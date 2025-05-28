@@ -19,7 +19,7 @@ export default function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (mobile === "9876543210" && password === "password") {
+    if (mobile === "9876543210" && password === "engineer@123") {
       navigate("/dashboard");
     } else {
       alert("Login Failed: Invalid mobile number or password");

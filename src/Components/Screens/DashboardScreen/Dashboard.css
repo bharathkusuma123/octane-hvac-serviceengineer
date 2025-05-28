@@ -1,0 +1,29 @@
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 80px; /* to push below top navbar */
+  text-align: left;
+  min-height: 100vh;
+  background-color: #f9f9f9;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.dashboard-content {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  width: 90%;
+  max-width: 600px;
+}
+
+.user-details p {
+  margin: 10px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.user-details strong {
+  color: #555;
+}
