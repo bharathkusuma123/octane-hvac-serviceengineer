@@ -14,7 +14,7 @@ const RejectFormScreen = () => {
     e.preventDefault();
     console.log("Rejected Service:", service);
     console.log("Reason:", reason);
-    navigate("/service-form");
+    navigate("/service-table");
   };
 
   if (!service) {
@@ -26,10 +26,14 @@ const RejectFormScreen = () => {
       <Navbar />
       <Container className="reject-form-container">
         <Card className="shadow-sm p-4">
-          <h4 className="text-center mb-4 text-dark">Reject Service ID: <strong>{service.id}</strong></h4>
+          <h4 className="text-center mb-4 text-dark">
+            Reject Service ID: <strong>{service.id}</strong>
+          </h4>
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-4">
-              <Form.Label className="fw-semibold">Reason for Rejection</Form.Label>
+              <Form.Label className="fw-semibold">
+                Reason for Rejection
+              </Form.Label>
               <Form.Control
                 as="textarea"
                 rows={5}
@@ -41,7 +45,11 @@ const RejectFormScreen = () => {
               />
             </Form.Group>
             <div className="d-flex justify-content-end">
-              <Button variant="secondary" className="me-3 px-4" onClick={() => navigate("/service-form")}>
+              <Button
+                variant="secondary"
+                className="me-3 px-4"
+                onClick={() => navigate("/service-form")}
+              >
                 Cancel
               </Button>
               <Button type="submit" variant="danger" className="px-4">
