@@ -47,7 +47,7 @@ function App() {
           <Route path="/machine" element={<MachineScreen />} />
           <Route path="/request" element={<RequestScreen />} />
           <Route path="/feedback" element={<FeedbackScreen />} />
-          <Route path="/service-form" element={<ServiceRequestTable />} />
+          <Route path="/service-table" element={<ServiceRequestTable />} />
            <Route path="/reject" element={<RejectForm />} />
         </Routes>
       </div>

@@ -66,7 +66,7 @@ const NavScreen = () => {
                 {/* Floating center button */}
                 <div
                   className="center-button"
-                  onClick={() => navigate("/service-form")}
+                  onClick={() => navigate("/service-table")}
                 >
                   <FaPlus />
                 </div>
