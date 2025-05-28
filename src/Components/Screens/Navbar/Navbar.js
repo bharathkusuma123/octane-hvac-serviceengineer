@@ -1,8 +1,6 @@
-
-
 // NavScreen.js
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FaHome,
   FaCogs,
@@ -11,15 +9,15 @@ import {
   FaPlus,
   FaBell,
   FaSignOutAlt,
-} from 'react-icons/fa';
-import './Navbar.css';
-import logo from '../../../Logos/hvac-logo-new.jpg'; // ✅ Adjust the path if your logo is elsewhere
+} from "react-icons/fa";
+import "./Navbar.css";
+import logo from "../../../Logos/hvac-logo-new.jpg"; // ✅ Adjust the path if your logo is elsewhere
 
 const screens = [
-  { label: 'Dashboard', name: '/dashboard', icon: <FaHome /> },
-  { label: 'Machines', name: '/machine', icon: <FaCogs /> },
-  { label: 'Requests', name: '/request', icon: <FaEnvelope /> },
-  { label: 'Feedback', name: '/feedback', icon: <FaCommentDots /> },
+  { label: "Dashboard", name: "/dashboard", icon: <FaHome /> },
+  { label: "Machines", name: "/machine", icon: <FaCogs /> },
+  { label: "Requests", name: "/request", icon: <FaEnvelope /> },
+  { label: "Feedback", name: "/feedback", icon: <FaCommentDots /> },
 ];
 
 const NavScreen = () => {
@@ -35,16 +33,17 @@ const NavScreen = () => {
     navigate(path);
   };
 
-
-
   return (
     <>
       {/* Top Navbar */}
       <div className="top-navbar">
         <img src={logo} alt="Logo" className="logo-img" />
         <div className="top-icons">
-          <FaBell className="top-icon" onClick={() => alert('Notifications Clicked!')} />
-          <FaSignOutAlt className="top-icon" onClick={() => navigate('/')} />
+          <FaBell
+            className="top-icon"
+            onClick={() => alert("Notifications Clicked!")}
+          />
+          <FaSignOutAlt className="top-icon" onClick={() => navigate("/")} />
         </div>
       </div>
 
@@ -55,7 +54,9 @@ const NavScreen = () => {
             return (
               <React.Fragment key={item.name}>
                 <button
-                  className={`nav-item ${activeIcon === item.name ? 'active' : ''}`}
+                  className={`nav-item ${
+                    activeIcon === item.name ? "active" : ""
+                  }`}
                   onClick={() => handleIconClick(item.name)}
                 >
                   {item.icon}
@@ -63,7 +64,10 @@ const NavScreen = () => {
                 </button>
 
                 {/* Floating center button */}
-                <div className="center-button" onClick={() => navigate('/service-form')}>
+                <div
+                  className="center-button"
+                  onClick={() => navigate("/service-form")}
+                >
                   <FaPlus />
                 </div>
               </React.Fragment>
@@ -73,7 +77,7 @@ const NavScreen = () => {
           return (
             <button
               key={item.name}
-              className={`nav-item ${activeIcon === item.name ? 'active' : ''}`}
+              className={`nav-item ${activeIcon === item.name ? "active" : ""}`}
               onClick={() => handleIconClick(item.name)}
             >
               {item.icon}
@@ -81,7 +85,6 @@ const NavScreen = () => {
             </button>
           );
         })}
-
       </div>
     </>
   );
