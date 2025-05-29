@@ -1,28 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Button } from "react-bootstrap";
 import Navbar from "../Navbar/Navbar";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./ServiceTable.css"; // Include custom styles
-
-const dummyData = [
-  {
-    id: "SVC001",
-    completionTime: "2025-06-01 14:00",
-    startTime: "2025-05-28 10:00",
-    endTime: "2025-05-30 18:00",
-  },
-  {
-    id: "SVC002",
-    completionTime: "2025-06-03 15:00",
-    startTime: "2025-05-29 09:00",
-    endTime: "2025-05-31 17:30",
-  },
-];
+import "./ServiceTable.css";
+import axios from "axios";
 
 const ServiceTable = () => {
   const navigate = useNavigate();
+  const [services, setServices] = useState([]);
   const [acceptedServices, setAcceptedServices] = useState([]);
+  const userId = localStorage.getItem("userId"); // 👈 Get logged-in user ID
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await axios.get("http://175.29.21.7:8006/service-pools/");
+        const allServices = Array.isArray(res.data) ? res.data : res.data.data || [];
+
+        // ✅ Filter services assigned to the logged-in engineer
+        const assignedToUser = allServices.filter(
+          (service) => String(service.assigned_engineer) === userId
+        );
+
+        setServices(assignedToUser);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      }
+    };
+
+    fetchServices();
+  }, [userId]);
 
   const handleAcceptClick = (serviceId) => {
     setAcceptedServices((prev) => [...prev, serviceId]);
@@ -41,7 +49,12 @@ const ServiceTable = () => {
         </div>
 
         <div className="table-responsive rounded shadow-sm">
-          <Table bordered hover responsive="md" className="text-center align-middle service-table">
+          <Table
+            bordered
+            hover
+            responsive="md"
+            className="text-center align-middle service-table"
+          >
             <thead className="table-light text-dark">
               <tr>
                 <th className="py-3 px-4">Service ID</th>
@@ -52,36 +65,44 @@ const ServiceTable = () => {
               </tr>
             </thead>
             <tbody>
-              {dummyData.map((service) => (
-                <tr key={service.id} className="service-row">
-                  <td className="py-3 px-4">{service.id}</td>
-                  <td className="py-3 px-4">{service.completionTime}</td>
-                  <td className="py-3 px-4">{service.startTime}</td>
-                  <td className="py-3 px-4">{service.endTime}</td>
-                  <td className="py-3 px-4">
-                    {acceptedServices.includes(service.id) ? (
-                      <span className="text-success fw-bold">Accepted</span>
-                    ) : (
-                      <div className="d-flex justify-content-center gap-2">
-                        <Button
-                          variant="success"
-                          size="sm"
-                          onClick={() => handleAcceptClick(service.id)}
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleRejectClick(service)}
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    )}
+              {services.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-4">
+                    No services assigned to you.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                services.map((service) => (
+                  <tr key={service.request_id || service.id} className="service-row">
+                    <td className="py-3 px-4">{service.request_id || service.id}</td>
+                    <td className="py-3 px-4">{service.estimated_completion_time}</td>
+                    <td className="py-3 px-4">{service.est_start_datetime}</td>
+                    <td className="py-3 px-4">{service.est_end_datetime}</td>
+                    <td className="py-3 px-4">
+                      {acceptedServices.includes(service.request_id || service.id) ? (
+                        <span className="text-success fw-bold">Accepted</span>
+                      ) : (
+                        <div className="d-flex justify-content-center gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleAcceptClick(service.request_id || service.id)}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleRejectClick(service)}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </Table>
         </div>
