@@ -16,8 +16,8 @@ import logo from "../../../Logos/hvac-logo-new.jpg"; // ✅ Adjust the path if y
 const screens = [
   { label: "Dashboard", name: "/dashboard", icon: <FaHome /> },
   { label: "Machines", name: "/machine", icon: <FaCogs /> },
-  { label: "Requests", name: "/request", icon: <FaEnvelope /> },
-  { label: "Feedback", name: "/feedback", icon: <FaCommentDots /> },
+  { label: "Requests", name: "/service-table", icon: <FaEnvelope /> },
+  // { label: "Feedback", name: "/feedback", icon: <FaCommentDots /> },
 ];
 
 const NavScreen = () => {
@@ -64,12 +64,12 @@ const NavScreen = () => {
                 </button>
 
                 {/* Floating center button */}
-                <div
+                {/* <div
                   className="center-button"
                   onClick={() => navigate("/service-table")}
                 >
                   <FaPlus />
-                </div>
+                </div> */}
               </React.Fragment>
             );
           }

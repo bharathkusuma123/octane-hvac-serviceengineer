@@ -38,16 +38,16 @@ const Dashboard = () => {
             <p><strong>Telephone:</strong> {userDetails.telephone}</p>
             <p><strong>City:</strong> {userDetails.city}</p>
             <p><strong>Country:</strong> {userDetails.country_code}</p>
-            <p><strong>Customer Type:</strong> {userDetails.customer_type}</p>
-            <p><strong>Status:</strong> {userDetails.status}</p>
-            <p><strong>Remarks:</strong> {userDetails.remarks}</p>
+            {/* <p><strong>Customer Type:</strong> {userDetails.customer_type}</p> */}
+            {/* <p><strong>Status:</strong> {userDetails.status}</p> */}
+            {/* <p><strong>Remarks:</strong> {userDetails.remarks}</p> */}
             <p><strong>Role:</strong> {userDetails.role}</p>
-            <p><strong>Hourly Rate:</strong> {userDetails.hourly_rate}</p>
+            {/* <p><strong>Hourly Rate:</strong> {userDetails.hourly_rate}</p>
             <p><strong>Address:</strong> {userDetails.address}</p>
             <p><strong>Availability:</strong> {userDetails.availability}</p>
             <p><strong>Rating:</strong> {userDetails.rating}</p>
             <p><strong>Created By:</strong> {userDetails.created_by}</p>
-            <p><strong>Updated By:</strong> {userDetails.updated_by}</p>
+            <p><strong>Updated By:</strong> {userDetails.updated_by}</p> */}
           </div>
         ) : (
           <p>Loading user details...</p>

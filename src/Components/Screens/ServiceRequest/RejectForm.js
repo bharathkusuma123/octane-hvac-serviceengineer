@@ -48,7 +48,7 @@ const RejectFormScreen = () => {
               <Button
                 variant="secondary"
                 className="me-3 px-4"
-                onClick={() => navigate("/service-form")}
+                onClick={() => navigate("/service-table")}
               >
                 Cancel
               </Button>
