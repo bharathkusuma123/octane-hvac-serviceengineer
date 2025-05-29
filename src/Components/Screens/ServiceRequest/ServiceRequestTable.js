@@ -32,9 +32,21 @@ const ServiceTable = () => {
     fetchServices();
   }, [userId]);
 
-  const handleAcceptClick = (serviceId) => {
+ const handleAcceptClick = async (serviceId) => {
+  try {
+    // Send a PATCH or PUT request to update status to "Accepted"
+    await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
+      status: "Accepted",
+    });
+
+    // Update UI state
     setAcceptedServices((prev) => [...prev, serviceId]);
-  };
+  } catch (error) {
+    console.error("Error updating service status:", error);
+    alert("Failed to accept the service. Please try again.");
+  }
+};
+
 
   const handleRejectClick = (service) => {
     navigate("/reject", { state: { service } });
