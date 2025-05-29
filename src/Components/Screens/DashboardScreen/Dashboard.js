@@ -27,7 +27,7 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <Navbar />
       <div className="dashboard-content">
-        <h2>Customer Dashboard</h2>
+        <h2>Dashboard</h2>
         {userDetails ? (
           <div className="user-details">
             <p><strong>User ID:</strong> {userDetails.user_id}</p>
