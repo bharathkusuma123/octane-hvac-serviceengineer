@@ -143,28 +143,27 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
                     <td className="py-3 px-4">{service.est_start_datetime}</td>
                     <td className="py-3 px-4">{service.est_end_datetime}</td>
                     <td className="py-3 px-4">
-                      {acceptedServices.includes(service.request_id || service.id) ? (
-                        <span className="text-success fw-bold">Accepted</span>
-                      ) : (
-                        <div className="d-flex justify-content-center gap-2">
-  <Button
-  variant="success"
-  size="sm"
-  onClick={() => handleAcceptClick(service.request_id, service.assignment_id)}
->
-  Accept
-</Button>
+                     {service.status === "Accepted" ? (
+  <span className="text-success fw-bold">Accepted</span>
+) : (
+  <div className="d-flex justify-content-center gap-2">
+    <Button
+      variant="success"
+      size="sm"
+      onClick={() => handleAcceptClick(service.request_id, service.assignment_id)}
+    >
+      Accept
+    </Button>
+    <Button
+      variant="danger"
+      size="sm"
+      onClick={() => handleRejectClick(service)}
+    >
+      Reject
+    </Button>
+  </div>
+)}
 
-
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleRejectClick(service)}
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 ))
