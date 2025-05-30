@@ -30,6 +30,7 @@ import RequestScreen from "./Components/Screens/RequestScreen/Request";
 import FeedbackScreen from "./Components/Screens/FeedbackScreen/Feedback";
 import ServiceRequestTable from "./Components/Screens/ServiceRequest/ServiceRequestTable";
 import RejectForm from "./Components/Screens/ServiceRequest/RejectForm";
+import ServiceDetails from "./Components/Screens/ServiceRequest/ServiceDetails";
 import "./App.css";
 
 function App() {
@@ -49,6 +50,8 @@ function App() {
           <Route path="/feedback" element={<FeedbackScreen />} />
           <Route path="/service-table" element={<ServiceRequestTable />} />
            <Route path="/reject" element={<RejectForm />} />
+            <Route path="/service-details" element={<ServiceDetails />} />
+
         </Routes>
       </div>
     </Router>
