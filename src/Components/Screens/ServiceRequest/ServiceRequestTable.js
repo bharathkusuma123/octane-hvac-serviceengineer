@@ -32,20 +32,72 @@ const ServiceTable = () => {
     fetchServices();
   }, [userId]);
 
- const handleAcceptClick = async (serviceId) => {
+
+  useEffect(() => {
+  const fetchAssignments = async () => {
+    try {
+      const res = await axios.get("http://175.29.21.7:8006/assignment-history/");
+      const assignments = Array.isArray(res.data) ? res.data : res.data.data;
+
+      const assignmentMap = {};
+      assignments.forEach((item) => {
+        assignmentMap[item.request] = item.assignment_id;
+      });
+
+      setServices((prevServices) =>
+        prevServices.map((service) => {
+          const assignmentId = assignmentMap[service.request_id];
+          if (!assignmentId) {
+            console.warn(`No assignmentId found for serviceId ${service.request_id}`);
+          }
+
+          return {
+            ...service,
+            assignment_id: assignmentId || null, // explicitly set to null if not found
+          };
+        })
+      );
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+    }
+  };
+
+  fetchAssignments();
+}, []);
+
+const handleAcceptClick = async (serviceId, assignmentId) => {
+  if (!serviceId) {
+    console.error("Missing serviceId");
+    return;
+  }
+
   try {
-    // Send a PATCH or PUT request to update status to "Accepted"
+    // ✅ 1. Update service-pools
     await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
       status: "Accepted",
     });
 
-    // Update UI state
+    // ✅ 2. Update assignment-history if assignmentId is present
+    if (assignmentId) {
+      await axios.put(`http://175.29.21.7:8006/assignment-history/${assignmentId}/`, {
+        status: "Accepted",
+      });
+    } else {
+      console.warn(`No assignmentId found for serviceId ${serviceId}`);
+    }
+
+    // ✅ 3. Update UI
     setAcceptedServices((prev) => [...prev, serviceId]);
+
+    // ✅ 4. Alert success only after both API calls succeed
+    alert("Service accepted successfully!");
   } catch (error) {
-    console.error("Error updating service status:", error);
+    console.error("Error updating status:", error);
     alert("Failed to accept the service. Please try again.");
   }
 };
+
+
 
 
   const handleRejectClick = (service) => {
@@ -95,13 +147,15 @@ const ServiceTable = () => {
                         <span className="text-success fw-bold">Accepted</span>
                       ) : (
                         <div className="d-flex justify-content-center gap-2">
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() => handleAcceptClick(service.request_id || service.id)}
-                          >
-                            Accept
-                          </Button>
+  <Button
+  variant="success"
+  size="sm"
+  onClick={() => handleAcceptClick(service.request_id, service.assignment_id)}
+>
+  Accept
+</Button>
+
+
                           <Button
                             variant="danger"
                             size="sm"
