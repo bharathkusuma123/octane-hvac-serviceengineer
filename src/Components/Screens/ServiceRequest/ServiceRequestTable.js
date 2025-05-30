@@ -10,6 +10,7 @@ const ServiceTable = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
   const [acceptedServices, setAcceptedServices] = useState([]);
+  const [declinedServices, setDeclinedServices] = useState([]);
   const userId = localStorage.getItem("userId"); // Get logged-in user ID
 
   useEffect(() => {
@@ -29,18 +30,27 @@ const ServiceTable = () => {
           ? assignmentsRes.data
           : assignmentsRes.data.data || [];
 
-        // Create a map of request_id to assignment_id
+        // Create maps for assignment data
         const assignmentMap = {};
+        const statusMap = {};
+        
         assignments.forEach((item) => {
           assignmentMap[item.request] = item.assignment_id;
+          statusMap[item.request] = item.status;
+          
+          // Track declined services
+          if (item.status === "Declined") {
+            setDeclinedServices(prev => [...prev, item.request]);
+          }
         });
 
-        // Filter services assigned to the logged-in engineer and map assignment_id
+        // Filter services assigned to the logged-in engineer and map assignment data
         const assignedToUser = allServices
           .filter((service) => String(service.assigned_engineer) === userId)
           .map((service) => ({
             ...service,
             assignment_id: assignmentMap[service.request_id] || null,
+            assignment_status: statusMap[service.request_id] || null,
           }));
 
         setServices(assignedToUser);
@@ -78,6 +88,7 @@ const ServiceTable = () => {
 
       // Update UI
       setAcceptedServices((prev) => [...prev, serviceId]);
+      setDeclinedServices((prev) => prev.filter(id => id !== serviceId));
 
       // Alert success only after both API calls succeed
       alert("Service accepted successfully!");
@@ -87,12 +98,18 @@ const ServiceTable = () => {
     }
   };
 
-
-  
-
   const handleRejectClick = (service) => {
     navigate("/reject", { state: { service } });
-    
+  };
+
+  // Function to check if buttons should be shown
+  const shouldShowButtons = (service) => {
+    return !(
+      service.status === "Accepted" || 
+      acceptedServices.includes(service.request_id) ||
+      service.assignment_status === "Declined" ||
+      declinedServices.includes(service.request_id)
+    );
   };
 
   return (
@@ -144,7 +161,10 @@ const ServiceTable = () => {
                       {service.status === "Accepted" ||
                       acceptedServices.includes(service.request_id) ? (
                         <span className="text-success fw-bold">Accepted</span>
-                      ) : (
+                      ) : service.assignment_status === "Declined" ||
+                        declinedServices.includes(service.request_id) ? (
+                        <span className="text-danger fw-bold">Rejected</span>
+                      ) : shouldShowButtons(service) ? (
                         <div className="d-flex justify-content-center gap-2">
                           <Button
                             variant="success"
@@ -166,6 +186,8 @@ const ServiceTable = () => {
                             Reject
                           </Button>
                         </div>
+                      ) : (
+                        <span className="text-secondary fw-bold">Pending</span>
                       )}
                     </td>
                   </tr>
