@@ -10,31 +10,42 @@ const RejectFormScreen = () => {
   const navigate = useNavigate();
   const service = location.state?.service;
   const [reason, setReason] = useState("");
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const serviceId = service.request_id || service.id;
+  const assignmentId = service.assignment_id;
 
-    // Use the same identifier as in ServiceTable (request_id or id)
-    const serviceId = service.request_id || service.id;
-    
-    if (!serviceId) {
-      alert("Invalid service ID");
-      return;
-    }
+  if (!assignmentId || !serviceId) {
+    alert("Invalid assignment or service ID");
+    return;
+  }
 
-    try {
-      await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
-        status: "Declined",
-        // rejection_reason: reason, // Make sure this matches your backend field name
-      });
+  try {
+    // Step 1: Update assignment-history (mark as Declined)
+    await axios.put(`http://175.29.21.7:8006/assignment-history/${assignmentId}/`, {
+      status: "Declined",
+      decline_reason: reason, // match backend field name
+    });
 
-      console.log("Service rejected:", serviceId, "Reason:", reason);
-      navigate("/service-table");
-    } catch (error) {
-      console.error("Error rejecting service:", error);
-      alert("Failed to reject the service. Please try again.");
-    }
-  };
+    console.log("Assignment updated:", assignmentId, "Reason:", reason);
+
+    // Step 2: Update service-pools (mark as Unassigned)
+    await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
+      status: "Unassigned",
+    });
+
+    console.log("Service status set to Unassigned:", serviceId);
+
+    // Step 3: Redirect
+    navigate("/service-table");
+  } catch (error) {
+    console.error("Error updating:", error);
+    alert("Failed to reject the service. Please try again.");
+  }
+};
+
+
 
   if (!service) {
     return <div className="text-center mt-5">No service selected.</div>;
