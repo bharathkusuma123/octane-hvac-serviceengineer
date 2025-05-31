@@ -11,7 +11,7 @@ import greenaire from '../../Logos/greenAire.png';
 import axios from "axios";
 
 export default function Login() {
-  const [mobile, setMobile] = useState('');
+  const [username, setUsername] = useState(""); 
   const [password, setPassword] = useState('');
   const [autoLogin, setAutoLogin] = useState(false);
   const [secureText, setSecureText] = useState(true);
@@ -24,9 +24,9 @@ const handleLogin = async (e) => {
 
  try {
       
-      const response = await axios.post("http://175.29.21.7:8006/login/", {
-        mobile_no: mobile,   
-        password,
+      const response = await axios.post("http://175.29.21.7:8006/user-login/", {
+        username,
+      password,
       });
 
       const user = response.data.data;
@@ -61,10 +61,10 @@ const handleLogin = async (e) => {
           <div className="inputWrapper">
             <FaUser className="icon" />
             <input
-              type="tel"
-              placeholder="Enter Mobile Number"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
+              type="text"
+              placeholder="Enter Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') passwordRef.current.focus();
               }}

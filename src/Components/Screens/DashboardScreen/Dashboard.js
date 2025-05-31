@@ -34,10 +34,10 @@ const Dashboard = () => {
             <p><strong>Username:</strong> {userDetails.username}</p>
             <p><strong>Full Name:</strong> {userDetails.full_name}</p>
             <p><strong>Email:</strong> {userDetails.email}</p>
-            <p><strong>Mobile No:</strong> {userDetails.mobile_no}</p>
+            <p><strong>Mobile No:</strong> {userDetails.phone}</p>
             <p><strong>Telephone:</strong> {userDetails.telephone}</p>
             <p><strong>City:</strong> {userDetails.city}</p>
-            <p><strong>Country:</strong> {userDetails.country_code}</p>
+            <p><strong>Country Code:</strong> {userDetails.country_code}</p>
             {/* <p><strong>Customer Type:</strong> {userDetails.customer_type}</p> */}
             {/* <p><strong>Status:</strong> {userDetails.status}</p> */}
             {/* <p><strong>Remarks:</strong> {userDetails.remarks}</p> */}
