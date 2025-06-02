@@ -293,47 +293,64 @@ const ServiceTable = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [servicesRes, assignmentsRes] = await Promise.all([
-          axios.get("http://175.29.21.7:8006/service-pools/"),
-          axios.get("http://175.29.21.7:8006/assignment-history/"),
-        ]);
+   const fetchData = async () => {
+  try {
+    const [servicesRes, assignmentsRes] = await Promise.all([
+      axios.get("http://175.29.21.7:8006/service-pools/"),
+      axios.get("http://175.29.21.7:8006/assignment-history/"),
+    ]);
 
-        const allServices = Array.isArray(servicesRes.data)
-          ? servicesRes.data
-          : servicesRes.data.data || [];
+    const allServices = Array.isArray(servicesRes.data)
+      ? servicesRes.data
+      : servicesRes.data.data || [];
 
-        const assignments = Array.isArray(assignmentsRes.data)
-          ? assignmentsRes.data
-          : assignmentsRes.data.data || [];
+    const assignments = Array.isArray(assignmentsRes.data)
+      ? assignmentsRes.data
+      : assignmentsRes.data.data || [];
 
-        const assignmentMap = {};
-        const statusMap = {};
-        
-        assignments.forEach((item) => {
-          assignmentMap[item.request] = item.assignment_id;
-          statusMap[item.request] = item.status;
-          
-          if (item.status === "Declined") {
-            setDeclinedServices(prev => [...prev, item.request]);
-          }
-        });
-
-        const assignedToUser = allServices
-          .filter((service) => String(service.assigned_engineer) === userId)
-          .map((service) => ({
-            ...service,
-            assignment_id: assignmentMap[service.request_id] || null,
-            assignment_status: statusMap[service.request_id] || null,
-          }));
-
-        setServices(assignedToUser);
-        setFilteredServices(assignedToUser);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+    // Create a map of the most recent assignment for each request per engineer
+    const userAssignmentMap = {};
+    
+    assignments.forEach((item) => {
+      const key = `${item.request}_${item.assigned_engineer}`;
+      if (!userAssignmentMap[key] || new Date(item.assigned_at) > new Date(userAssignmentMap[key].assigned_at)) {
+        userAssignmentMap[key] = item;
       }
-    };
+    });
+
+    // Get services assigned to current user
+    const assignedToUser = allServices
+      .filter((service) => {
+        // Check both service pool assignment and assignment history
+        return String(service.assigned_engineer) === userId || 
+               Object.values(userAssignmentMap).some(
+                 assignment => assignment.request === service.request_id && 
+                              assignment.assigned_engineer === userId
+               );
+      })
+      .map((service) => {
+        // Find the current user's assignment for this request
+        const userAssignment = Object.values(userAssignmentMap).find(
+          assignment => assignment.request === service.request_id && 
+                       assignment.assigned_engineer === userId
+        );
+        
+        return {
+          ...service,
+          assignment_id: userAssignment?.assignment_id || null,
+          assignment_status: userAssignment?.status || null,
+          assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
+          is_current_user_assignment: userAssignment?.assigned_engineer === userId
+        };
+      });
+
+    setServices(assignedToUser);
+    setFilteredServices(assignedToUser);
+
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
+};
 
     fetchData();
   }, [userId]);
@@ -394,14 +411,17 @@ const ServiceTable = () => {
     navigate("/service-details", { state: { service } });
   };
 
-  const shouldShowButtons = (service) => {
-    return !(
-      service.status === "Accepted" || 
-      acceptedServices.includes(service.request_id) ||
-      service.assignment_status === "Declined" ||
-      declinedServices.includes(service.request_id)
-    );
-  };
+ const shouldShowButtons = (service) => {
+  // Show buttons only if:
+  // 1. It's assigned to current user
+  // 2. The status is not Accepted
+  // 3. The current user's assignment status is not Declined
+  return (
+    service.assigned_engineer === userId &&
+    service.status !== "Accepted" &&
+    service.assignment_status !== "Declined"
+  );
+};
 
   return (
     <>
@@ -464,41 +484,34 @@ const ServiceTable = () => {
                     >
                       {service.request_id || service.id}
                     </td>
-                    <td className="py-3 px-3">
-                      {service.status === "Accepted" ||
-                      acceptedServices.includes(service.request_id) ? (
-                        <span className="text-success fw-bold">Accepted</span>
-                      ) : service.assignment_status === "Declined" ||
-                        declinedServices.includes(service.request_id) ? (
-                        <span className="text-danger fw-bold">Rejected</span>
-                      ) : shouldShowButtons(service) ? (
-                        <div className="d-flex justify-content-center gap-2">
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() =>
-                              handleAcceptClick(
-                                service.request_id,
-                                service.assignment_id
-                              )
-                            }
-                            className="px-2"
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleRejectClick(service)}
-                            className="px-2"
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-secondary fw-bold">Pending</span>
-                      )}
-                    </td>
+                   <td className="py-3 px-3">
+  {service.status === "Accepted" ? (
+    <span className="text-success fw-bold">Accepted</span>
+  ) : service.assignment_status === "Declined" && service.assigned_engineer === userId ? (
+    <span className="text-danger fw-bold">Rejected</span>
+  ) : service.assignment_status === "Pending" && service.assigned_engineer === userId ? (
+    <div className="d-flex justify-content-center gap-2">
+      <Button
+        variant="success"
+        size="sm"
+        onClick={() => handleAcceptClick(service.request_id, service.assignment_id)}
+        className="px-2"
+      >
+        Accept
+      </Button>
+      <Button
+        variant="danger"
+        size="sm"
+        onClick={() => handleRejectClick(service)}
+        className="px-2"
+      >
+        Reject
+      </Button>
+    </div>
+  ) : (
+    <span className="text-secondary fw-bold">Pending</span>
+  )}
+</td>
                   </tr>
                 ))
               )}
