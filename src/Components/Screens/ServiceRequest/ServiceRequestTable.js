@@ -292,62 +292,51 @@ const ServiceTable = () => {
   const [itemsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
 
- useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const [servicesRes, assignmentsRes] = await Promise.all([
-        axios.get("http://175.29.21.7:8006/service-pools/"),
-        axios.get("http://175.29.21.7:8006/assignment-history/"),
-      ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [servicesRes, assignmentsRes] = await Promise.all([
+          axios.get("http://175.29.21.7:8006/service-pools/"),
+          axios.get("http://175.29.21.7:8006/assignment-history/"),
+        ]);
 
-      const allServices = Array.isArray(servicesRes.data)
-        ? servicesRes.data
-        : servicesRes.data.data || [];
+        const allServices = Array.isArray(servicesRes.data)
+          ? servicesRes.data
+          : servicesRes.data.data || [];
 
-      const assignments = Array.isArray(assignmentsRes.data)
-        ? assignmentsRes.data
-        : assignmentsRes.data.data || [];
+        const assignments = Array.isArray(assignmentsRes.data)
+          ? assignmentsRes.data
+          : assignmentsRes.data.data || [];
 
-      const assignmentMap = {};
-      const statusMap = {};
+        const assignmentMap = {};
+        const statusMap = {};
+        
+        assignments.forEach((item) => {
+          assignmentMap[item.request] = item.assignment_id;
+          statusMap[item.request] = item.status;
+          
+          if (item.status === "Declined") {
+            setDeclinedServices(prev => [...prev, item.request]);
+          }
+        });
 
-      assignments.forEach((item) => {
-        assignmentMap[item.request] = item.assignment_id;
-        statusMap[item.request] = item.status;
-
-        if (item.status === "Declined") {
-          setDeclinedServices((prev) => [...prev, item.request]);
-        }
-      });
-
-      const assignedToUser = allServices
-        .filter((service) => String(service.assigned_engineer) === userId)
-        .map((service) => {
-          // Extract service_item and customer for each service
-          const { service_item, customer } = service;
-
-          // Log or use them as needed
-          console.log("Service Item:", service_item, "Customer:", customer);
-
-          return {
+        const assignedToUser = allServices
+          .filter((service) => String(service.assigned_engineer) === userId)
+          .map((service) => ({
             ...service,
             assignment_id: assignmentMap[service.request_id] || null,
             assignment_status: statusMap[service.request_id] || null,
-            service_item,
-            customer
-          };
-        });
+          }));
 
-      setServices(assignedToUser);
-      setFilteredServices(assignedToUser);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
+        setServices(assignedToUser);
+        setFilteredServices(assignedToUser);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
 
-  fetchData();
-}, [userId]);
-
+    fetchData();
+  }, [userId]);
 
   // Apply search filter
   useEffect(() => {
@@ -370,90 +359,32 @@ const ServiceTable = () => {
   const currentItems = filteredServices.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-const handleAcceptClick = async (serviceId, assignmentId, customer, service_item) => {
-  console.log('handleAcceptClick triggered', { serviceId, assignmentId });
-  
-  if (!serviceId) {
-    console.error("Missing serviceId - cannot proceed with acceptance");
-    return;
-  }
-
-  try {
-    console.log('Starting service acceptance process...');
-    
-    // First, update the service pool status
-    console.log(`Updating service-pools/${serviceId} status to "Accepted"`);
-    const servicePoolResponse = await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
-      status: "Accepted",
-    });
-    console.log('Service pool update successful:', servicePoolResponse.data);
-
-    // Then update the assignment history status
-    if (assignmentId) {
-      console.log(`Updating assignment-history/${assignmentId} status to "Accepted"`);
-      const assignmentResponse = await axios.put(
-        `http://175.29.21.7:8006/assignment-history/${assignmentId}/`,
-        { status: "Accepted" }
-      );
-      console.log('Assignment history update successful:', assignmentResponse.data);
-    } else {
-      console.warn('No assignmentId provided - skipping assignment history update');
+  const handleAcceptClick = async (serviceId, assignmentId) => {
+    if (!serviceId) {
+      console.error("Missing serviceId");
+      return;
     }
 
-    // Create a new service order
-    const serviceOrderData = {
-      dynamics_service_order_no: `SO-${Date.now()}`,
-      source: "IoT Alert",
-      request_details: "Service request accepted by engineer",
-      alert_details: "Service alert",
-      status: "Assigned",
-      resource_accepted: true,
-      service_request_id: serviceId.toString(),
-      resource: userId.toString(),
-      created_by: "Service Manager",
-      customer: customer,
-      service_item: service_item,
-      updated_by: "Service Manager"
-    };
-
-    console.log('Creating new service order with data:', serviceOrderData);
-    const serviceOrderResponse = await axios.post(
-      "http://175.29.21.7:8006/service-orders/",
-      serviceOrderData
-    );
-    console.log('Service order creation successful:', serviceOrderResponse.data);
-
-    // Update local state
-    console.log(`Adding serviceId ${serviceId} to acceptedServices`);
-    setAcceptedServices((prev) => [...prev, serviceId]);
-    console.log(`Removing serviceId ${serviceId} from declinedServices if present`);
-    setDeclinedServices((prev) => prev.filter(id => id !== serviceId));
-    
-    console.log('All operations completed successfully');
-    alert("Service accepted and order created successfully!");
-  } catch (error) {
-    console.error("Error in handleAcceptClick:", {
-      error: error.response ? error.response.data : error.message,
-      config: error.config,
-    });
-    
-    if (error.response) {
-      console.error('Server responded with:', {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers,
+    try {
+      await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
+        status: "Accepted",
       });
-    } else if (error.request) {
-      console.error('No response received:', error.request);
-    } else {
-      console.error('Request setup error:', error.message);
+
+      if (assignmentId) {
+        await axios.put(
+          `http://175.29.21.7:8006/assignment-history/${assignmentId}/`,
+          { status: "Accepted" }
+        );
+      }
+
+      setAcceptedServices((prev) => [...prev, serviceId]);
+      setDeclinedServices((prev) => prev.filter(id => id !== serviceId));
+      alert("Service accepted successfully!");
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("Failed to accept the service. Please try again.");
     }
-    
-    alert("Failed to accept the service. Please try again.");
-  } finally {
-    console.log('handleAcceptClick execution completed');
-  }
-};
+  };
 
   const handleRejectClick = (service) => {
     navigate("/reject", { state: { service } });
@@ -548,9 +479,7 @@ const handleAcceptClick = async (serviceId, assignmentId, customer, service_item
                             onClick={() =>
                               handleAcceptClick(
                                 service.request_id,
-                                service.assignment_id,
-                                service.customer,
-                                service.service_item
+                                service.assignment_id
                               )
                             }
                             className="px-2"
