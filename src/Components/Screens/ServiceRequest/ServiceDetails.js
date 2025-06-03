@@ -36,7 +36,7 @@ const ServiceDetails = () => {
   }
 
 
-const handleStatusChange = async (e) => {
+  const handleStatusChange = async (e) => {
   const newStatus = e.target.value;
   setStatus(newStatus);
   setUpdating(true);
@@ -45,11 +45,10 @@ const handleStatusChange = async (e) => {
   console.log('Requesting service orders to find matching order...');
 
   try {
-    // Get all service orders
     const ordersRes = await axios.get('http://175.29.21.7:8006/service-orders/');
     console.log('Service Orders response:', ordersRes.data);
 
-    // Find the matching order
+    // Access the nested data array and find the matching order
     const matchedOrder = ordersRes.data.data.find(
       (order) => order.service_request_id === service.request_id.toString()
     );
@@ -61,36 +60,83 @@ const handleStatusChange = async (e) => {
       return;
     }
 
-    const serviceOrderId = matchedOrder.service_order_id;
+    const serviceOrderId = matchedOrder.service_order_id; // Using service_order_id instead of id
     console.log('Found service_order_id:', serviceOrderId);
 
-    // Make both API calls simultaneously
-    await Promise.all([
-      // Update service order status
-      axios.put(`http://175.29.21.7:8006/service-orders/${serviceOrderId}/`, {
-        status: newStatus,
-      }),
-      
-      // Update service pool status
-      axios.put(`http://175.29.21.7:8006/service-pools/${service.request_id}/`, {
-        status: newStatus,
-      })
-    ]);
+    console.log('Sending PUT request to update status...');
+    console.log("service request id:", service.request_id);
+    console.log("service order id:", serviceOrderId);
 
-    console.log('Both status updates successful!');
-    alert('Status updated successfully in both systems!');
+    // Update the service order status
+    await axios.put(`http://175.29.21.7:8006/service-orders/${serviceOrderId}/`, {
+      status: newStatus,
+    });
+
+    console.log('Status update successful!');
+    alert('Status updated successfully!');
   } catch (err) {
     console.error('Error during status update:', err);
-    
-    // Provide more detailed error information
-    const errorMessage = err.response?.data?.message || 
-                        err.response?.data?.detail || 
-                        err.message;
-    alert(`Failed to update status. Error: ${errorMessage}`);
+    alert('Failed to update status. Error: ' + (err.response?.data?.message || err.message));
   } finally {
     setUpdating(false);
   }
 };
+
+// const handleStatusChange = async (e) => {
+//   const newStatus = e.target.value;
+//   setStatus(newStatus);
+//   setUpdating(true);
+
+//   console.log('Selected new status:', newStatus);
+//   console.log('Requesting service orders to find matching order...');
+
+//   try {
+//     // Get all service orders
+//     const ordersRes = await axios.get('http://175.29.21.7:8006/service-orders/');
+//     console.log('Service Orders response:', ordersRes.data);
+
+//     // Find the matching order
+//     const matchedOrder = ordersRes.data.data.find(
+//       (order) => order.service_request_id === service.request_id.toString()
+//     );
+
+//     if (!matchedOrder) {
+//       console.warn('No matching service order found for:', service.request_id);
+//       alert('Service Order not found for the given request ID.');
+//       setUpdating(false);
+//       return;
+//     }
+
+//     const serviceOrderId = matchedOrder.service_order_id;
+//     console.log('Found service_order_id:', serviceOrderId);
+
+//     // Make both API calls simultaneously
+//     await Promise.all([
+//       // Update service order status
+//       axios.put(`http://175.29.21.7:8006/service-orders/${serviceOrderId}/`, {
+//         status: newStatus,
+//       }),
+      
+//       // Update service pool status
+//       axios.put(`http://175.29.21.7:8006/service-pools/${service.request_id}/`, {
+//         status: newStatus,
+//       })
+//     ]);
+
+//     console.log('Both status updates successful!');
+//     alert('Status updated successfully in both systems!');
+//   } catch (err) {
+//     console.error('Error during status update:', err);
+    
+//     // Provide more detailed error information
+//     const errorMessage = err.response?.data?.message || 
+//                         err.response?.data?.detail || 
+//                         err.message;
+//     alert(`Failed to update status. Error: ${errorMessage}`);
+//   } finally {
+//     setUpdating(false);
+//   }
+// };
 
   return (
     <>
