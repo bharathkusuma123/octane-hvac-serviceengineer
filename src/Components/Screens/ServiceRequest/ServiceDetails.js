@@ -5,7 +5,7 @@ import Navbar from '../Navbar/Navbar';
 import axios from 'axios';
 
 const statusOptions = [
-  // 'Assigned',
+  'Assigned',
   'Under Process',
   'Waiting for Spareparts',
   'Waiting for Quote',
