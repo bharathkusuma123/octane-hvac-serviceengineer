@@ -3,6 +3,7 @@ import { Button, Form } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar/Navbar';
 import axios from 'axios';
+import baseURL from '../../ApiUrl/Apiurl';
 
 const statusOptions = [
   'Assigned',
@@ -45,7 +46,7 @@ const ServiceDetails = () => {
   console.log('Requesting service orders to find matching order...');
 
   try {
-    const ordersRes = await axios.get('http://175.29.21.7:8006/service-orders/');
+    const ordersRes = await axios.get(`${baseURL}/service-orders/`);
     console.log('Service Orders response:', ordersRes.data);
 
     // Access the nested data array and find the matching order
@@ -68,7 +69,7 @@ const ServiceDetails = () => {
     console.log("service order id:", serviceOrderId);
 
     // Update the service order status
-    await axios.put(`http://175.29.21.7:8006/service-orders/${serviceOrderId}/`, {
+    await axios.put(`${baseURL}/service-orders/${serviceOrderId}/`, {
       status: newStatus,
     });
 
@@ -92,7 +93,7 @@ const ServiceDetails = () => {
 
 //   try {
 //     // Get all service orders
-//     const ordersRes = await axios.get('http://175.29.21.7:8006/service-orders/');
+//     const ordersRes = await axios.get(`${baseURL}/service-orders/`);
 //     console.log('Service Orders response:', ordersRes.data);
 
 //     // Find the matching order
@@ -113,12 +114,12 @@ const ServiceDetails = () => {
 //     // Make both API calls simultaneously
 //     await Promise.all([
 //       // Update service order status
-//       axios.put(`http://175.29.21.7:8006/service-orders/${serviceOrderId}/`, {
+//       axios.put(`${baseURL}/service-orders/${serviceOrderId}/`, {
 //         status: newStatus,
 //       }),
       
 //       // Update service pool status
-//       axios.put(`http://175.29.21.7:8006/service-pools/${service.request_id}/`, {
+//       axios.put(`${baseURL}/service-pools/${service.request_id}/`, {
 //         status: newStatus,
 //       })
 //     ]);

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./ServiceTable.css";
 import axios from "axios";
+import baseURL from "../../ApiUrl/Apiurl";
 
 const ServiceTable = () => {
   const navigate = useNavigate();
@@ -18,8 +19,8 @@ const ServiceTable = () => {
       try {
         // Fetch both service-pools and assignment-history concurrently
         const [servicesRes, assignmentsRes] = await Promise.all([
-          axios.get("http://175.29.21.7:8006/service-pools/"),
-          axios.get("http://175.29.21.7:8006/assignment-history/"),
+          axios.get(`${baseURL}/service-pools/`),
+          axios.get(`${baseURL}/assignment-history/`),
         ]);
 
         const allServices = Array.isArray(servicesRes.data)
@@ -70,14 +71,14 @@ const ServiceTable = () => {
 
     try {
       // Update service-pools
-      await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
+      await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
         status: "Accepted",
       });
 
       // Update assignment-history if assignmentId is present
       if (assignmentId) {
         await axios.put(
-          `http://175.29.21.7:8006/assignment-history/${assignmentId}/`,
+          `${baseURL}/assignment-history/${assignmentId}/`,
           {
             status: "Accepted",
           }
@@ -236,8 +237,8 @@ export default ServiceTable;
 //     const fetchData = async () => {
 //       try {
 //         const [servicesRes, assignmentsRes] = await Promise.all([
-//           axios.get("http://175.29.21.7:8006/service-pools/"),
-//           axios.get("http://175.29.21.7:8006/assignment-history/"),
+//           axios.get(`${baseURL}/service-pools/`),
+//           axios.get(`${baseURL}/assignment-history/`),
 //         ]);
 
 //         const allServices = Array.isArray(servicesRes.data)
@@ -306,13 +307,13 @@ export default ServiceTable;
 //     }
 
 //     try {
-//       await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
+//       await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
 //         status: "Accepted",
 //       });
 
 //       if (assignmentId) {
 //         await axios.put(
-//           `http://175.29.21.7:8006/assignment-history/${assignmentId}/`,
+//           `${baseURL}/assignment-history/${assignmentId}/`,
 //           { status: "Accepted" }
 //         );
 //       }

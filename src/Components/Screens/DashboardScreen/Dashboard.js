@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import "./Dashboard.css";
 import Navbar from "../../Screens/Navbar/Navbar";
 import axios from "axios";
+import baseURL from '../../ApiUrl/Apiurl';
 
 const Dashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
@@ -10,7 +11,7 @@ const Dashboard = () => {
     const userId = localStorage.getItem("userId");
 
     if (userId) {
-      axios.get("http://175.29.21.7:8006/users/")
+      axios.get(`${baseURL}/users/`)
         .then((res) => {
           const matchedUser = res.data.find(user => user.user_id === userId);
           if (matchedUser) {

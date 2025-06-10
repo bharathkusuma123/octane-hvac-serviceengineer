@@ -9,6 +9,7 @@ import logo from '../../Logos/hvac-logo-new.jpg';
 import googleicon from '../../Logos/googleicon.png';
 import greenaire from '../../Logos/greenAire.png';
 import axios from "axios";
+import baseURL from '../ApiUrl/Apiurl';
 
 export default function Login() {
   const [username, setUsername] = useState(""); 
@@ -24,7 +25,7 @@ const handleLogin = async (e) => {
 
  try {
       
-      const response = await axios.post("http://175.29.21.7:8006/user-login/", {
+      const response = await axios.post(`${baseURL}/user-login/`, {
         username,
       password,
       });

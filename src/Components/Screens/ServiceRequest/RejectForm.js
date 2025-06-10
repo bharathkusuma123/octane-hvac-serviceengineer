@@ -4,6 +4,7 @@ import { Form, Button, Card, Container } from "react-bootstrap";
 import Navbar from "../Navbar/Navbar";
 import "./RejectForm.css";
 import axios from "axios";
+import baseURL from "../../ApiUrl/Apiurl";
 
 const RejectFormScreen = () => {
   const location = useLocation();
@@ -25,7 +26,7 @@ const RejectFormScreen = () => {
 
     try {
       // Step 1: Update assignment-history (mark as Declined)
-      await axios.put(`http://175.29.21.7:8006/assignment-history/${assignmentId}/`, {
+      await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, {
         status: "Declined",
         decline_reason: reason,
       });
@@ -33,7 +34,7 @@ const RejectFormScreen = () => {
       console.log("Assignment updated:", assignmentId, "Reason:", reason);
 
       // Step 2: Update service-pools (mark as Unassigned)
-      await axios.put(`http://175.29.21.7:8006/service-pools/${serviceId}/`, {
+      await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
         status: "Unassigned",
       });
 
@@ -58,7 +59,7 @@ const RejectFormScreen = () => {
 
       console.log('Creating declined service order with data:', serviceOrderData);
       const serviceOrderResponse = await axios.post(
-        "http://175.29.21.7:8006/service-orders/",
+        `${baseURL}/service-orders/`,
         serviceOrderData
       );
       console.log('Declined service order created:', serviceOrderResponse.data);
