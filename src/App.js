@@ -32,6 +32,8 @@ import ServiceRequestTable from "./Components/Screens/ServiceRequest/ServiceRequ
 import RejectForm from "./Components/Screens/ServiceRequest/RejectForm";
 import ServiceDetails from "./Components/Screens/ServiceRequest/ServiceDetails";
 import "./App.css";
+import SignUpScreen from './Components/Login/SignUpScreen';
+import SignupSetPassword from './Components/Login/SignupSetPassword'
 
 function App() {
   return (
@@ -51,6 +53,8 @@ function App() {
           <Route path="/service-table" element={<ServiceRequestTable />} />
            <Route path="/reject" element={<RejectForm />} />
             <Route path="/service-details" element={<ServiceDetails />} />
+            <Route path="/signup" element={<SignUpScreen />} /> {/* Added signup route */}
+           <Route path="/signupset-password-screen" element={<SignupSetPassword />} /> {/* Added signup route */}
 
         </Routes>
       </div>
