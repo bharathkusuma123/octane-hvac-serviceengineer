@@ -134,13 +134,25 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
       });
     }
 
+    setServices(prevServices =>
+      prevServices.map(service =>
+        service.request_id === serviceId
+          ? {
+              ...service,
+              status: "Accepted",
+              assignment_status: "Accepted"
+            }
+          : service
+      )
+    );
+
     // 3. Get the accepted service
     const acceptedService = services.find(service => service.request_id === serviceId);
 
     // 4. Construct payload for service-orders
     const serviceOrderPayload = {
       dynamics_service_order_no: "", // Provide if needed
-      source: "IoT Alert", 
+     source: "IoT Alert",
       request_details: acceptedService.request_details || "N/A",
       alert_details: acceptedService.alert_details || "",
       requested_by: acceptedService.requested_by || "",
