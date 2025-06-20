@@ -34,11 +34,15 @@ import ServiceDetails from "./Components/Screens/ServiceRequest/ServiceDetails";
 import "./App.css";
 import SignUpScreen from './Components/Login/SignUpScreen';
 import SignupSetPassword from './Components/Login/SignupSetPassword'
+import { CompanyProvider } from '../src/Components/CompanyContext';
 
 function App() {
   return (
+     <CompanyProvider>
     <Router>
+       
       <div className="App">
+        
         <Routes>
           <Route path="/" element={<Login />} />
 
@@ -50,7 +54,7 @@ function App() {
           <Route path="/machine" element={<MachineScreen />} />
           <Route path="/request" element={<RequestScreen />} />
           <Route path="/feedback" element={<FeedbackScreen />} />
-          <Route path="/service-table" element={<ServiceRequestTable />} />
+            <Route path="/service-table" element={<ServiceRequestTable />} />
            <Route path="/reject" element={<RejectForm />} />
             <Route path="/service-details" element={<ServiceDetails />} />
             <Route path="/signup" element={<SignUpScreen />} /> {/* Added signup route */}
@@ -59,6 +63,7 @@ function App() {
         </Routes>
       </div>
     </Router>
+    </CompanyProvider>
   );
 }
 

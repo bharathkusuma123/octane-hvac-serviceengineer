@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./ServiceTable.css";
 import axios from "axios";
-import baseURL from "../../ApiUrl/Apiurl";
+import baseURL from "../../ApiUrl/Apiurl"; 
+import { useCompany } from "../../CompanyContext";
 
 const ServiceTable = () => {
   const navigate = useNavigate();
@@ -13,6 +14,8 @@ const ServiceTable = () => {
   const [filteredServices, setFilteredServices] = useState([]);
   const [acceptedServices, setAcceptedServices] = useState([]);
   const [declinedServices, setDeclinedServices] = useState([]);
+   const { selectedCompany, updateCompany } = useCompany();
+
   const userId = localStorage.getItem("userId");
   
   // Pagination state
@@ -23,8 +26,10 @@ const ServiceTable = () => {
 useEffect(() => {
   const fetchData = async () => {
     try {
-      const selectedCompany = localStorage.getItem("selectedCompany"); // Make sure this is set
+   
       const userId = localStorage.getItem("userId");
+       console.log("selectedCompany",selectedCompany);
+       console.log("user id",userId);
 
       // Step 1: Get the user's resource_id
       const resourceRes = await axios.get(`${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`);
