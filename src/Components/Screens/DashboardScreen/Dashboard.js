@@ -6,30 +6,54 @@ import baseURL from '../../ApiUrl/Apiurl';
 
 const Dashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
+  const [resourceId, setResourceId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const userId = localStorage.getItem("userId");
+  const selectedCompany = localStorage.getItem("selectedCompany");
 
   useEffect(() => {
-    const userId = localStorage.getItem("userId");
+    const fetchUserAndResource = async () => {
+      try {
+        // 1. Get user details
+        const userResponse = await axios.get(`${baseURL}/users/`);
+        const matchedUser = userResponse.data.find(user => user.user_id === userId);
+        if (matchedUser) {
+          setUserDetails(matchedUser);
+        }
 
-    if (userId) {
-      axios.get(`${baseURL}/users/`)
-        .then((res) => {
-          const matchedUser = res.data.find(user => user.user_id === userId);
-          if (matchedUser) {
-            setUserDetails(matchedUser);
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching user data:", error);
-        });
+        // 2. Get resource matching the userId and companyId
+        const resourceResponse = await axios.get(
+          `${baseURL}/resources/?user_id=${userId}&company_id=${selectedCompany}`
+        );
+
+        const matchedResource = resourceResponse.data?.data?.find(
+          (resource) => resource.user === userId
+        );
+
+        if (matchedResource) {
+          setResourceId(matchedResource.resource_id);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userId && selectedCompany) {
+      fetchUserAndResource();
     }
-  }, []);
+  }, [userId, selectedCompany]);
 
   return (
     <div className="dashboard-container">
       <Navbar />
       <div className="dashboard-content">
         <h2>Dashboard</h2>
-        {userDetails ? (
+        {loading ? (
+          <p>Loading user details...</p>
+        ) : userDetails ? (
           <div className="user-details">
             <p><strong>User ID:</strong> {userDetails.user_id}</p>
             <p><strong>Username:</strong> {userDetails.username}</p>
@@ -39,19 +63,15 @@ const Dashboard = () => {
             <p><strong>Telephone:</strong> {userDetails.telephone}</p>
             <p><strong>City:</strong> {userDetails.city}</p>
             <p><strong>Country Code:</strong> {userDetails.country_code}</p>
-            {/* <p><strong>Customer Type:</strong> {userDetails.customer_type}</p> */}
-            {/* <p><strong>Status:</strong> {userDetails.status}</p> */}
-            {/* <p><strong>Remarks:</strong> {userDetails.remarks}</p> */}
             <p><strong>Role:</strong> {userDetails.role}</p>
-            {/* <p><strong>Hourly Rate:</strong> {userDetails.hourly_rate}</p>
-            <p><strong>Address:</strong> {userDetails.address}</p>
-            <p><strong>Availability:</strong> {userDetails.availability}</p>
-            <p><strong>Rating:</strong> {userDetails.rating}</p>
-            <p><strong>Created By:</strong> {userDetails.created_by}</p>
-            <p><strong>Updated By:</strong> {userDetails.updated_by}</p> */}
+
+            {/* ✅ Show resource ID if found */}
+            {resourceId && (
+              <p><strong>Resource ID:</strong> {resourceId}</p>
+            )}
           </div>
         ) : (
-          <p>Loading user details...</p>
+          <p>User not found</p>
         )}
       </div>
     </div>

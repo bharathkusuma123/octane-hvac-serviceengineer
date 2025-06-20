@@ -14,96 +14,84 @@ const ServiceTable = () => {
   const [filteredServices, setFilteredServices] = useState([]);
   const [acceptedServices, setAcceptedServices] = useState([]);
   const [declinedServices, setDeclinedServices] = useState([]);
-   const { selectedCompany, updateCompany } = useCompany();
-
+  const { selectedCompany, updateCompany } = useCompany();
+  const [resourceId, setResourceId] = useState(null);
   const userId = localStorage.getItem("userId");
-  
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-   
-      const userId = localStorage.getItem("userId");
-       console.log("selectedCompany",selectedCompany);
-       console.log("user id",userId);
+ useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const resourceRes = await axios.get(`${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`);
+        const resourceData = resourceRes.data?.data || [];
 
-      // Step 1: Get the user's resource_id
-      const resourceRes = await axios.get(`${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`);
-      const resourceData = resourceRes.data?.data || [];
+        const currentResource = resourceData.find(res => res.user === userId);
+        const extractedResourceId = currentResource?.resource_id;
+        setResourceId(extractedResourceId);
 
-      // Find resource matching userId
-      const currentResource = resourceData.find(res => res.user === userId);
-      const resourceId = currentResource?.resource_id;
-
-      if (!resourceId) {
-        console.warn("No resource_id found for the current user");
-        setServices([]);
-        return;
-      }
-
-      // Step 2: Fetch services and assignments
-      const [servicesRes, assignmentsRes] = await Promise.all([
-        axios.get(`${baseURL}/service-pools/`),
-        axios.get(`${baseURL}/assignment-history/`)
-      ]);
-
-      const allServices = Array.isArray(servicesRes.data)
-        ? servicesRes.data
-        : servicesRes.data.data || [];
-
-      const assignments = Array.isArray(assignmentsRes.data)
-        ? assignmentsRes.data
-        : assignmentsRes.data.data || [];
-
-      // Step 3: Map latest assignment per request-engineer
-      const userAssignmentMap = {};
-      assignments.forEach(item => {
-        const key = `${item.request}_${item.assigned_engineer}`;
-        if (!userAssignmentMap[key] || new Date(item.assigned_at) > new Date(userAssignmentMap[key].assigned_at)) {
-          userAssignmentMap[key] = item;
+        if (!extractedResourceId) {
+          console.warn("No resource_id found for the current user");
+          setServices([]);
+          return;
         }
-      });
 
-      // Step 4: Filter assigned services
-      const assignedToUser = allServices
-        .filter(service =>
-          service.assigned_engineer === resourceId ||
-          Object.values(userAssignmentMap).some(
-            assignment =>
-              assignment.request === service.request_id &&
-              assignment.assigned_engineer === resourceId
-          )
-        )
-        .map(service => {
-          const userAssignment = Object.values(userAssignmentMap).find(
-            assignment =>
-              assignment.request === service.request_id &&
-              assignment.assigned_engineer === resourceId
-          );
+        const [servicesRes, assignmentsRes] = await Promise.all([
+          axios.get(`${baseURL}/service-pools/`),
+          axios.get(`${baseURL}/assignment-history/`)
+        ]);
 
-          return {
-            ...service,
-            assignment_id: userAssignment?.assignment_id || null,
-            assignment_status: userAssignment?.status || null,
-            assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
-            is_current_user_assignment: userAssignment?.assigned_engineer === resourceId
-          };
+        const allServices = Array.isArray(servicesRes.data)
+          ? servicesRes.data
+          : servicesRes.data.data || [];
+
+        const assignments = Array.isArray(assignmentsRes.data)
+          ? assignmentsRes.data
+          : assignmentsRes.data.data || [];
+
+        const userAssignmentMap = {};
+        assignments.forEach(item => {
+          const key = `${item.request}_${item.assigned_engineer}`;
+          if (!userAssignmentMap[key] || new Date(item.assigned_at) > new Date(userAssignmentMap[key].assigned_at)) {
+            userAssignmentMap[key] = item;
+          }
         });
 
-      setServices(assignedToUser);
-      setFilteredServices(assignedToUser);
+        const assignedToUser = allServices
+          .filter(service =>
+            service.assigned_engineer === extractedResourceId ||
+            Object.values(userAssignmentMap).some(
+              assignment =>
+                assignment.request === service.request_id &&
+                assignment.assigned_engineer === extractedResourceId
+            )
+          )
+          .map(service => {
+            const userAssignment = Object.values(userAssignmentMap).find(
+              assignment =>
+                assignment.request === service.request_id &&
+                assignment.assigned_engineer === extractedResourceId
+            );
 
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
+            return {
+              ...service,
+              assignment_id: userAssignment?.assignment_id || null,
+              assignment_status: userAssignment?.status || null,
+              assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
+              is_current_user_assignment: userAssignment?.assigned_engineer === extractedResourceId
+            };
+          });
 
-  fetchData();
-}, []);
+        setServices(assignedToUser);
+        setFilteredServices(assignedToUser);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, [selectedCompany, userId]);
 
 
   // Apply search filter
@@ -127,32 +115,71 @@ useEffect(() => {
   const currentItems = filteredServices.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-  const handleAcceptClick = async (serviceId, assignmentId) => {
-    if (!serviceId) {
-      console.error("Missing serviceId");
-      return;
-    }
+const handleAcceptClick = async (serviceId, assignmentId) => {
+  if (!serviceId) {
+    console.error("Missing serviceId");
+    return;
+  }
 
-    try {
-      await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
+  try {
+    // 1. Update status in service-pools
+    await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
+      status: "Accepted",
+    });
+
+    // 2. Update status in assignment-history
+    if (assignmentId) {
+      await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, {
         status: "Accepted",
       });
-
-      if (assignmentId) {
-        await axios.put(
-          `${baseURL}/assignment-history/${assignmentId}/`,
-          { status: "Accepted" }
-        );
-      }
-
-      setAcceptedServices((prev) => [...prev, serviceId]);
-      setDeclinedServices((prev) => prev.filter(id => id !== serviceId));
-      alert("Service accepted successfully!");
-    } catch (error) {
-      console.error("Error updating status:", error);
-      alert("Failed to accept the service. Please try again.");
     }
-  };
+
+    // 3. Get the accepted service
+    const acceptedService = services.find(service => service.request_id === serviceId);
+
+    // 4. Construct payload for service-orders
+    const serviceOrderPayload = {
+      dynamics_service_order_no: "", // Provide if needed
+      source: "IoT Alert", 
+      request_details: acceptedService.request_details || "N/A",
+      alert_details: acceptedService.alert_details || "",
+      requested_by: acceptedService.requested_by || "",
+      preferred_date: acceptedService.preferred_date,
+      preferred_time: acceptedService.preferred_time,
+      estimated_completion_time: acceptedService.estimated_completion_time,
+      estimated_price: acceptedService.estimated_price || "0",
+      resource_accepted: true,
+      status: "Assigned",
+      completion_notes: "",
+      decline_reason: "",
+      act_start_datetime: acceptedService.est_start_datetime || new Date().toISOString(),
+      act_end_datetime: acceptedService.est_end_datetime || new Date().toISOString(),
+      act_material_cost: "0",
+      act_labour_hours: "0",
+      act_labour_cost: "0",
+      created_by: acceptedService.created_by || "system",
+      updated_by: acceptedService.updated_by || "system",
+      company: acceptedService.company || selectedCompany,
+      service_item: acceptedService.service_item || "",
+      customer: acceptedService.customer || "",
+      preventive_task: "",
+      service_request_id: acceptedService.request_id,
+      resource: resourceId
+    };
+
+    // 5. Send POST request to service-orders
+    await axios.post(`http://175.29.21.7:8006/service-orders/`, serviceOrderPayload);
+
+    // 6. Update UI state
+    setAcceptedServices((prev) => [...prev, serviceId]);
+    setDeclinedServices((prev) => prev.filter(id => id !== serviceId));
+    alert("Service accepted and order created successfully!");
+  } catch (error) {
+    console.error("Error accepting service or creating service order:", error);
+    alert("Failed to complete the action. Please try again.");
+  }
+};
+
 
   const handleRejectClick = (service) => {
     navigate("/reject", { state: { service } });
@@ -162,17 +189,7 @@ useEffect(() => {
     navigate("/service-details", { state: { service } });
   };
 
- const shouldShowButtons = (service) => {
-  // Show buttons only if:
-  // 1. It's assigned to current user
-  // 2. The status is not Accepted
-  // 3. The current user's assignment status is not Declined
-  return (
-    service.assigned_engineer === userId &&
-    service.status !== "Accepted" &&
-    service.assignment_status !== "Declined"
-  );
-};
+
 
   return (
     <>
@@ -209,6 +226,7 @@ useEffect(() => {
               <tr>
                 <th className="py-3 px-3">S.No</th>
                 <th className="py-3 px-3">Service ID</th>
+                <th className="py-3 px-3">Customer</th>
                 <th className="py-3 px-3">Action</th>
               </tr>
             </thead>
@@ -235,12 +253,19 @@ useEffect(() => {
                     >
                       {service.request_id || service.id}
                     </td>
+
+                    <td 
+                      className="py-3 px-3 text-primary"
+                     
+                    >
+                     {service.customer || "N/A"}
+                    </td>
                    <td className="py-3 px-3">
   {service.status === "Accepted" ? (
     <span className="text-success fw-bold">Accepted</span>
-  ) : service.assignment_status === "Declined" && service.assigned_engineer === userId ? (
+  ) : service.assignment_status === "Declined" && service.assigned_engineer === resourceId ? (
     <span className="text-danger fw-bold">Rejected</span>
-  ) : service.assignment_status === "Pending" && service.assigned_engineer === userId ? (
+  ) : service.assignment_status === "Pending" && service.assigned_engineer === resourceId ? (
     <div className="d-flex justify-content-center gap-2">
       <Button
         variant="success"
