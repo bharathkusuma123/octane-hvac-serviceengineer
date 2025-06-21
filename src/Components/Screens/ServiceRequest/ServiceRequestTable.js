@@ -21,77 +21,98 @@ const ServiceTable = () => {
   const [itemsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
 
- useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const resourceRes = await axios.get(`${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`);
-        const resourceData = resourceRes.data?.data || [];
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      if (!selectedCompany || !userId) {
+        console.warn("selectedCompany or userId not ready yet");
+        return;
+      }
 
-        const currentResource = resourceData.find(res => res.user === userId);
-        const extractedResourceId = currentResource?.resource_id;
-        setResourceId(extractedResourceId);
+      // Fetch resource
+      const resourceRes = await axios.get(
+        `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`
+      );
+      const resourceData = resourceRes.data?.data || [];
 
-        if (!extractedResourceId) {
-          console.warn("No resource_id found for the current user");
-          setServices([]);
-          return;
+      const currentResource = resourceData.find(res => res.user === userId);
+      const extractedResourceId = currentResource?.resource_id;
+      setResourceId(extractedResourceId);
+
+      if (!extractedResourceId) {
+        console.warn("No resource_id found for current user");
+        setServices([]);
+        return;
+      }
+
+      // Fetch services and assignments in parallel
+      const [servicesRes, assignmentsRes] = await Promise.all([
+        axios.get(`${baseURL}/service-pools/`),
+        axios.get(`${baseURL}/assignment-history/`)
+      ]);
+
+      const allServices = Array.isArray(servicesRes.data)
+        ? servicesRes.data
+        : servicesRes.data.data || [];
+
+      let assignments = Array.isArray(assignmentsRes.data)
+        ? assignmentsRes.data
+        : assignmentsRes.data.data || [];
+
+      // 🔽 Sort assignments by created_at descending
+      assignments.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      // Map to latest assignment per request-engineer pair
+      const userAssignmentMap = {};
+      assignments.forEach(item => {
+        const key = `${item.request}_${item.assigned_engineer}`;
+        if (!userAssignmentMap[key]) {
+          userAssignmentMap[key] = item; // Already sorted, so first is most recent
         }
+      });
 
-        const [servicesRes, assignmentsRes] = await Promise.all([
-          axios.get(`${baseURL}/service-pools/`),
-          axios.get(`${baseURL}/assignment-history/`)
-        ]);
+      const assignedToUser = allServices
+        .filter(service =>
+          service.assigned_engineer === extractedResourceId ||
+          Object.values(userAssignmentMap).some(
+            assignment =>
+              assignment.request === service.request_id &&
+              assignment.assigned_engineer === extractedResourceId
+          )
+        )
+        .map(service => {
+          const userAssignment = Object.values(userAssignmentMap).find(
+            assignment =>
+              assignment.request === service.request_id &&
+              assignment.assigned_engineer === extractedResourceId
+          );
 
-        const allServices = Array.isArray(servicesRes.data)
-          ? servicesRes.data
-          : servicesRes.data.data || [];
-
-        const assignments = Array.isArray(assignmentsRes.data)
-          ? assignmentsRes.data
-          : assignmentsRes.data.data || [];
-
-        const userAssignmentMap = {};
-        assignments.forEach(item => {
-          const key = `${item.request}_${item.assigned_engineer}`;
-          if (!userAssignmentMap[key] || new Date(item.assigned_at) > new Date(userAssignmentMap[key].assigned_at)) {
-            userAssignmentMap[key] = item;
-          }
+          return {
+            ...service,
+            assignment_id: userAssignment?.assignment_id || null,
+            assignment_status: userAssignment?.status || null,
+            assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
+            is_current_user_assignment:
+              userAssignment?.assigned_engineer === extractedResourceId
+          };
         });
 
-        const assignedToUser = allServices
-          .filter(service =>
-            service.assigned_engineer === extractedResourceId ||
-            Object.values(userAssignmentMap).some(
-              assignment =>
-                assignment.request === service.request_id &&
-                assignment.assigned_engineer === extractedResourceId
-            )
-          )
-          .map(service => {
-            const userAssignment = Object.values(userAssignmentMap).find(
-              assignment =>
-                assignment.request === service.request_id &&
-                assignment.assigned_engineer === extractedResourceId
-            );
+      setServices(assignedToUser);
+      setFilteredServices(assignedToUser);
+    } catch (error) {
+      console.error("🔴 Error fetching data:", error.message || error);
+    }
+  };
 
-            return {
-              ...service,
-              assignment_id: userAssignment?.assignment_id || null,
-              assignment_status: userAssignment?.status || null,
-              assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
-              is_current_user_assignment: userAssignment?.assigned_engineer === extractedResourceId
-            };
-          });
-
-        setServices(assignedToUser);
-        setFilteredServices(assignedToUser);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
+  if (selectedCompany && userId) {
     fetchData();
-  }, [selectedCompany, userId]);
+  }
+}, [selectedCompany, userId]);
+
+
+
 
 
   // Apply search filter
