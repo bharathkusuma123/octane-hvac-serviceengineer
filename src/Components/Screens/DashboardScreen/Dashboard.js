@@ -59,7 +59,7 @@ const Dashboard = () => {
             <p><strong>Username:</strong> {userDetails.username}</p>
             <p><strong>Full Name:</strong> {userDetails.full_name}</p>
             <p><strong>Email:</strong> {userDetails.email}</p>
-            <p><strong>Mobile No:</strong> {userDetails.phone}</p>
+            <p><strong>Mobile No:</strong> {userDetails.mobile}</p>
             <p><strong>Telephone:</strong> {userDetails.telephone}</p>
             <p><strong>City:</strong> {userDetails.city}</p>
             <p><strong>Country Code:</strong> {userDetails.country_code}</p>
