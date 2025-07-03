@@ -64,11 +64,9 @@ const Dashboard = () => {
             <p><strong>City:</strong> {userDetails.city}</p>
             <p><strong>Country Code:</strong> {userDetails.country_code}</p>
             <p><strong>Role:</strong> {userDetails.role}</p>
-
-            {/* ✅ Show resource ID if found */}
-            {resourceId && (
+            
               <p><strong>Resource ID:</strong> {resourceId}</p>
-            )}
+            
           </div>
         ) : (
           <p>User not found</p>

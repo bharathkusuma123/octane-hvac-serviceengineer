@@ -24,28 +24,35 @@ const ServiceTable = () => {
 useEffect(() => {
   const fetchData = async () => {
     try {
+      console.log("🔹 Selected Company:", selectedCompany);
+      console.log("🔹 User ID:", userId);
+
       if (!selectedCompany || !userId) {
         console.warn("selectedCompany or userId not ready yet");
         return;
       }
 
-      // Fetch resource
-      const resourceRes = await axios.get(
-        `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`
-      );
+      // ✅ Fetch resource by company_id and user_id
+      const resourceUrl = `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`;
+      console.log("🔗 Fetching Resource from:", resourceUrl);
+
+      const resourceRes = await axios.get(resourceUrl);
       const resourceData = resourceRes.data?.data || [];
 
       const currentResource = resourceData.find(res => res.user === userId);
       const extractedResourceId = currentResource?.resource_id;
+
+      console.log("✅ Extracted resource_id:", extractedResourceId);
+
       setResourceId(extractedResourceId);
 
       if (!extractedResourceId) {
-        console.warn("No resource_id found for current user");
+        console.warn("❌ No matching resource_id found for this user.");
         setServices([]);
         return;
       }
 
-      // Fetch services and assignments in parallel
+      // ✅ Fetch service-pools and assignment-history in parallel
       const [servicesRes, assignmentsRes] = await Promise.all([
         axios.get(`${baseURL}/service-pools/`),
         axios.get(`${baseURL}/assignment-history/`)
@@ -59,17 +66,17 @@ useEffect(() => {
         ? assignmentsRes.data
         : assignmentsRes.data.data || [];
 
-      // 🔽 Sort assignments by created_at descending
+      // 🔽 Sort assignments by latest date
       assignments.sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
       );
 
-      // Map to latest assignment per request-engineer pair
+      // ✅ Latest assignment per (request_id, assigned_engineer)
       const userAssignmentMap = {};
       assignments.forEach(item => {
         const key = `${item.request}_${item.assigned_engineer}`;
         if (!userAssignmentMap[key]) {
-          userAssignmentMap[key] = item; // Already sorted, so first is most recent
+          userAssignmentMap[key] = item;
         }
       });
 
@@ -92,17 +99,18 @@ useEffect(() => {
           return {
             ...service,
             assignment_id: userAssignment?.assignment_id || null,
-            assignment_status: userAssignment?.status || null,
+            assignment_status: userAssignment?.status || service.status || "Pending",
             assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
             is_current_user_assignment:
               userAssignment?.assigned_engineer === extractedResourceId
           };
         });
 
+      console.log("✅ Assigned services count:", assignedToUser.length);
       setServices(assignedToUser);
       setFilteredServices(assignedToUser);
     } catch (error) {
-      console.error("🔴 Error fetching data:", error.message || error);
+      console.error("🔴 Error fetching data:", error.response?.data || error.message || error);
     }
   };
 
@@ -112,10 +120,6 @@ useEffect(() => {
 }, [selectedCompany, userId]);
 
 
-
-
-
-  // Apply search filter
   useEffect(() => {
     if (searchTerm === "") {
       setFilteredServices(services);
@@ -136,82 +140,83 @@ useEffect(() => {
   const currentItems = filteredServices.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-const handleAcceptClick = async (serviceId, assignmentId) => {
+const handleAcceptClick = async (serviceId) => {
   if (!serviceId) {
     console.error("Missing serviceId");
     return;
   }
 
   try {
-    // 1. Update status in service-pools
-    await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
-      status: "Accepted",
-    });
+    // 1. 🔄 Fetch the current service object
+    const serviceRes = await axios.get(`${baseURL}/service-pools/${serviceId}/`);
+    const serviceData = serviceRes.data;
 
-    // 2. Update status in assignment-history
-    if (assignmentId) {
-      await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, {
+    // 2. 🛠️ Update the status field
+    const updatedService = {
+      ...serviceData,
+      status: "Under Process",
+    };
+
+    console.log("🔄 Full service-pools PUT payload:", updatedService);
+
+    // 3. ✅ PUT with the full object
+    const poolUpdateRes = await axios.put(`${baseURL}/service-pools/${serviceId}/`, updatedService);
+    console.log("✅ service-pools updated:", poolUpdateRes.data);
+
+    // 4. 🔁 Now proceed with assignment-history update
+    const assignmentRes = await axios.get(`${baseURL}/assignment-history/`);
+    const assignments = assignmentRes.data.data || [];
+
+    const matchingAssignment = assignments.find(a => a.request === serviceId);
+
+    if (matchingAssignment) {
+      const assignmentPayload = {
+        assignment_id: matchingAssignment.assignment_id,
+        assigned_at: matchingAssignment.assigned_at,
+        assignment_type: matchingAssignment.assignment_type,
         status: "Accepted",
-      });
+        decline_reason: matchingAssignment.decline_reason || "",
+        comments: matchingAssignment.comments || "",
+        created_by: matchingAssignment.created_by,
+        updated_by: matchingAssignment.updated_by || "system",
+        company: matchingAssignment.company,
+        request: matchingAssignment.request,
+        assigned_engineer: matchingAssignment.assigned_engineer,
+        assigned_by: matchingAssignment.assigned_by,
+      };
+
+      console.log("📦 Assignment PUT Payload:\n", JSON.stringify(assignmentPayload, null, 2));
+
+      const assignmentUpdateRes = await axios.put(
+        `${baseURL}/assignment-history/${matchingAssignment.assignment_id}/`,
+        assignmentPayload
+      );
+
+      console.log("✅ assignment-history updated:", assignmentUpdateRes.data);
+    } else {
+      console.warn("No matching assignment found.");
     }
 
-    setServices(prevServices =>
-      prevServices.map(service =>
-        service.request_id === serviceId
-          ? {
-              ...service,
-              status: "Accepted",
-              assignment_status: "Accepted"
-            }
-          : service
+    // 5. 🖥️ Update local state
+    setServices(prev =>
+      prev.map(s =>
+        s.request_id === serviceId
+          ? { ...s, status: "Under Process", assignment_status: "Accepted" }
+          : s
       )
     );
 
-    // 3. Get the accepted service
-    const acceptedService = services.find(service => service.request_id === serviceId);
+    setAcceptedServices(prev => [...prev, serviceId]);
+    setDeclinedServices(prev => prev.filter(id => id !== serviceId));
 
-    // 4. Construct payload for service-orders
-    const serviceOrderPayload = {
-      dynamics_service_order_no: "", // Provide if needed
-     source: "IoT Alert",
-      request_details: acceptedService.request_details || "N/A",
-      alert_details: acceptedService.alert_details || "",
-      requested_by: acceptedService.requested_by || "",
-      preferred_date: acceptedService.preferred_date,
-      preferred_time: acceptedService.preferred_time,
-      estimated_completion_time: acceptedService.estimated_completion_time,
-      estimated_price: acceptedService.estimated_price || "0",
-      resource_accepted: true,
-      status: "Assigned",
-      completion_notes: "",
-      decline_reason: "",
-      act_start_datetime: acceptedService.est_start_datetime || new Date().toISOString(),
-      act_end_datetime: acceptedService.est_end_datetime || new Date().toISOString(),
-      act_material_cost: "0",
-      act_labour_hours: "0",
-      act_labour_cost: "0",
-      created_by: acceptedService.created_by || "system",
-      updated_by: acceptedService.updated_by || "system",
-      company: acceptedService.company || selectedCompany,
-      service_item: acceptedService.service_item || "",
-      customer: acceptedService.customer || "",
-      preventive_task: "",
-      service_request_id: acceptedService.request_id,
-      resource: resourceId
-    };
-
-    // 5. Send POST request to service-orders
-    await axios.post(`http://175.29.21.7:8006/service-orders/`, serviceOrderPayload);
-
-    // 6. Update UI state
-    setAcceptedServices((prev) => [...prev, serviceId]);
-    setDeclinedServices((prev) => prev.filter(id => id !== serviceId));
-    alert("Service accepted and order created successfully!");
+    alert("✅ Status updated successfully!");
   } catch (error) {
-    console.error("Error accepting service or creating service order:", error);
-    alert("Failed to complete the action. Please try again.");
+    console.error("❌ Error updating:", error.response?.data || error);
+    alert("Error updating. Check console.");
   }
 };
+
+
 
 
   const handleRejectClick = (service) => {
@@ -293,17 +298,20 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
                     >
                      {service.customer || "N/A"}
                     </td>
-                   <td className="py-3 px-3">
+<td className="py-3 px-3">
   {service.status === "Accepted" ? (
     <span className="text-success fw-bold">Accepted</span>
   ) : service.assignment_status === "Declined" && service.assigned_engineer === resourceId ? (
     <span className="text-danger fw-bold">Rejected</span>
-  ) : service.assignment_status === "Pending" && service.assigned_engineer === resourceId ? (
+  ) : (["Pending", "Assigned"].includes(service.assignment_status) &&
+      service.assigned_engineer === resourceId) ? (
     <div className="d-flex justify-content-center gap-2">
       <Button
         variant="success"
         size="sm"
-        onClick={() => handleAcceptClick(service.request_id, service.assignment_id)}
+        onClick={() =>
+          handleAcceptClick(service.request_id, service.assignment_id)
+        }
         className="px-2"
       >
         Accept
@@ -321,6 +329,8 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
     <span className="text-secondary fw-bold">Pending</span>
   )}
 </td>
+
+
                   </tr>
                 ))
               )}
