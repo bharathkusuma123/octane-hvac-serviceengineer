@@ -6,14 +6,12 @@ import axios from 'axios';
 import baseURL from '../../ApiUrl/Apiurl';
 
 const statusOptions = [
-  'Assigned',
   'Under Process',
-  'Waiting for Spareparts',
+  'Waiting for Spares',
   'Waiting for Quote',
   'Waiting for Client Approval',
-  'Service Completed',
-  'Service Closed',
-  'Re-Opened',
+  'Closed',
+  'Reopened',
 ];
 
 const ServiceDetails = () => {
@@ -37,107 +35,42 @@ const ServiceDetails = () => {
   }
 
 
-  const handleStatusChange = async (e) => {
+const handleStatusChange = async (e) => {
   const newStatus = e.target.value;
   setStatus(newStatus);
   setUpdating(true);
 
-  console.log('Selected new status:', newStatus);
-  console.log('Requesting service orders to find matching order...');
+  console.log("Selected new status:", newStatus);
+  console.log("Sending PUT request to /service-pools/ to update status...");
 
   try {
-    const ordersRes = await axios.get(`${baseURL}/service-orders/`);
-    console.log('Service Orders response:', ordersRes.data);
+    const requestId = service.request_id;
 
-    // Access the nested data array and find the matching order
-    const matchedOrder = ordersRes.data.data.find(
-      (order) => order.service_request_id === service.request_id.toString()
-    );
-
-    if (!matchedOrder) {
-      console.warn('No matching service order found for:', service.request_id);
-      alert('Service Order not found for the given request ID.');
+    if (!requestId) {
+      alert("Missing service request ID");
       setUpdating(false);
       return;
     }
 
-    const serviceOrderId = matchedOrder.service_order_id; // Using service_order_id instead of id
-    console.log('Found service_order_id:', serviceOrderId);
-
-    console.log('Sending PUT request to update status...');
-    console.log("service request id:", service.request_id);
-    console.log("service order id:", serviceOrderId);
-
-    // Update the service order status
-    await axios.put(`${baseURL}/service-orders/${serviceOrderId}/`, {
-      status: newStatus,
+    await axios.put(`${baseURL}/service-pools/${requestId}/`, {
+      ...service, 
+      status: newStatus, 
     });
 
-    console.log('Status update successful!');
-    alert('Status updated successfully!');
+    // console.log("✅ Status updated successfully in service-pools!");
+    alert("Status updated successfully!");
   } catch (err) {
-    console.error('Error during status update:', err);
-    alert('Failed to update status. Error: ' + (err.response?.data?.message || err.message));
+    console.error("Error updating status in service-pools:", err);
+    alert(
+      "Failed to update status. Error: " +
+        (err.response?.data?.message || err.message)
+    );
   } finally {
     setUpdating(false);
   }
 };
 
-// const handleStatusChange = async (e) => {
-//   const newStatus = e.target.value;
-//   setStatus(newStatus);
-//   setUpdating(true);
 
-//   console.log('Selected new status:', newStatus);
-//   console.log('Requesting service orders to find matching order...');
-
-//   try {
-//     // Get all service orders
-//     const ordersRes = await axios.get(`${baseURL}/service-orders/`);
-//     console.log('Service Orders response:', ordersRes.data);
-
-//     // Find the matching order
-//     const matchedOrder = ordersRes.data.data.find(
-//       (order) => order.service_request_id === service.request_id.toString()
-//     );
-
-//     if (!matchedOrder) {
-//       console.warn('No matching service order found for:', service.request_id);
-//       alert('Service Order not found for the given request ID.');
-//       setUpdating(false);
-//       return;
-//     }
-
-//     const serviceOrderId = matchedOrder.service_order_id;
-//     console.log('Found service_order_id:', serviceOrderId);
-
-//     // Make both API calls simultaneously
-//     await Promise.all([
-//       // Update service order status
-//       axios.put(`${baseURL}/service-orders/${serviceOrderId}/`, {
-//         status: newStatus,
-//       }),
-      
-//       // Update service pool status
-//       axios.put(`${baseURL}/service-pools/${service.request_id}/`, {
-//         status: newStatus,
-//       })
-//     ]);
-
-//     console.log('Both status updates successful!');
-//     alert('Status updated successfully in both systems!');
-//   } catch (err) {
-//     console.error('Error during status update:', err);
-    
-//     // Provide more detailed error information
-//     const errorMessage = err.response?.data?.message || 
-//                         err.response?.data?.detail || 
-//                         err.message;
-//     alert(`Failed to update status. Error: ${errorMessage}`);
-//   } finally {
-//     setUpdating(false);
-//   }
-// };
 
   return (
     <>
@@ -153,6 +86,7 @@ const ServiceDetails = () => {
               <h6>Details:</h6>
               <div className="row mt-3">
                 <div className="col-md-6">
+                  <p><strong>Request Details:</strong> {service.request_details || 'N/A'}</p>
                   <p><strong>Estimated Completion:</strong> {service.estimated_completion_time || 'N/A'}</p>
                   <p><strong>Start Date & Time:</strong> {service.est_start_datetime || 'N/A'}</p>
                   <p><strong>End Date & Time:</strong> {service.est_end_datetime || 'N/A'}</p>

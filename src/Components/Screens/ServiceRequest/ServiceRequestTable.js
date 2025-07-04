@@ -34,7 +34,7 @@ useEffect(() => {
 
       // ✅ Fetch resource by company_id and user_id
       const resourceUrl = `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`;
-      console.log("🔗 Fetching Resource from:", resourceUrl);
+      // console.log("Fetching Resource from:", resourceUrl);
 
       const resourceRes = await axios.get(resourceUrl);
       const resourceData = resourceRes.data?.data || [];
@@ -42,12 +42,12 @@ useEffect(() => {
       const currentResource = resourceData.find(res => res.user === userId);
       const extractedResourceId = currentResource?.resource_id;
 
-      console.log("✅ Extracted resource_id:", extractedResourceId);
+      // console.log("Extracted resource_id:", extractedResourceId);
 
       setResourceId(extractedResourceId);
 
       if (!extractedResourceId) {
-        console.warn("❌ No matching resource_id found for this user.");
+        // console.warn("No matching resource_id found for this user.");
         setServices([]);
         return;
       }
@@ -140,64 +140,46 @@ useEffect(() => {
   const currentItems = filteredServices.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-const handleAcceptClick = async (serviceId) => {
-  if (!serviceId) {
-    console.error("Missing serviceId");
+const handleAcceptClick = async (serviceId, assignmentId) => {
+  if (!serviceId || !assignmentId) {
+    console.error("Missing serviceId or assignmentId");
     return;
   }
 
   try {
-    // 1. 🔄 Fetch the current service object
+    // 1. Update service-pools status
     const serviceRes = await axios.get(`${baseURL}/service-pools/${serviceId}/`);
     const serviceData = serviceRes.data;
 
-    // 2. 🛠️ Update the status field
     const updatedService = {
       ...serviceData,
       status: "Under Process",
     };
 
-    console.log("🔄 Full service-pools PUT payload:", updatedService);
+    await axios.put(`${baseURL}/service-pools/${serviceId}/`, updatedService);
+    console.log("✅ service-pools status updated");
 
-    // 3. ✅ PUT with the full object
-    const poolUpdateRes = await axios.put(`${baseURL}/service-pools/${serviceId}/`, updatedService);
-    console.log("✅ service-pools updated:", poolUpdateRes.data);
-
-    // 4. 🔁 Now proceed with assignment-history update
+    // 2. Update assignment-history for the specific assignmentId
     const assignmentRes = await axios.get(`${baseURL}/assignment-history/`);
     const assignments = assignmentRes.data.data || [];
 
-    const matchingAssignment = assignments.find(a => a.request === serviceId);
+    const targetAssignment = assignments.find(a => a.assignment_id === assignmentId);
 
-    if (matchingAssignment) {
-      const assignmentPayload = {
-        assignment_id: matchingAssignment.assignment_id,
-        assigned_at: matchingAssignment.assigned_at,
-        assignment_type: matchingAssignment.assignment_type,
-        status: "Accepted",
-        decline_reason: matchingAssignment.decline_reason || "",
-        comments: matchingAssignment.comments || "",
-        created_by: matchingAssignment.created_by,
-        updated_by: matchingAssignment.updated_by || "system",
-        company: matchingAssignment.company,
-        request: matchingAssignment.request,
-        assigned_engineer: matchingAssignment.assigned_engineer,
-        assigned_by: matchingAssignment.assigned_by,
-      };
-
-      console.log("📦 Assignment PUT Payload:\n", JSON.stringify(assignmentPayload, null, 2));
-
-      const assignmentUpdateRes = await axios.put(
-        `${baseURL}/assignment-history/${matchingAssignment.assignment_id}/`,
-        assignmentPayload
-      );
-
-      console.log("✅ assignment-history updated:", assignmentUpdateRes.data);
-    } else {
-      console.warn("No matching assignment found.");
+    if (!targetAssignment) {
+      console.warn("Assignment not found for assignment_id:", assignmentId);
+      return;
     }
 
-    // 5. 🖥️ Update local state
+    const updatedAssignment = {
+      ...targetAssignment,
+      status: "Accepted",
+      updated_by: targetAssignment.updated_by || "system",
+    };
+
+    await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, updatedAssignment);
+    console.log("assignment-history updated");
+
+    // 3. Update local state
     setServices(prev =>
       prev.map(s =>
         s.request_id === serviceId
@@ -209,15 +191,12 @@ const handleAcceptClick = async (serviceId) => {
     setAcceptedServices(prev => [...prev, serviceId]);
     setDeclinedServices(prev => prev.filter(id => id !== serviceId));
 
-    alert("✅ Status updated successfully!");
+    alert("Status updated successfully!");
   } catch (error) {
-    console.error("❌ Error updating:", error.response?.data || error);
+    console.error("Error updating:", error.response?.data || error);
     alert("Error updating. Check console.");
   }
 };
-
-
-
 
   const handleRejectClick = (service) => {
     navigate("/reject", { state: { service } });
@@ -299,7 +278,7 @@ const handleAcceptClick = async (serviceId) => {
                      {service.customer || "N/A"}
                     </td>
 <td className="py-3 px-3">
-  {service.status === "Accepted" ? (
+  {service.status === "Under Process" ? (
     <span className="text-success fw-bold">Accepted</span>
   ) : service.assignment_status === "Declined" && service.assigned_engineer === resourceId ? (
     <span className="text-danger fw-bold">Rejected</span>
