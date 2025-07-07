@@ -6,7 +6,7 @@ import axios from "axios";
 import logo from "../../Logos/hvac-logo-new.jpg";
 import "./SignupSetPassword.css";
 import baseURL from '../ApiUrl/Apiurl';
-
+import Swal from "sweetalert2";
 const SECURITY_QUESTION_CHOICES = [
   "What is your mother's maiden name?",
   "What was the name of your first pet?",
@@ -40,62 +40,83 @@ const SignupSetPassword = () => {
   }, [location, navigate]);
 
 const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
+    e.preventDefault();
 
-  // Validation
-  if (password !== confirmPassword) {
-    setError("Passwords do not match!");
-    return;
-  }
-
-  if (!q1 || !q2) {
-    setError("Please select both security questions");
-    return;
-  }
-
-  if (!a1 || !a2) {
-    setError("Please provide answers for both security questions");
-    return;
-  }
-
-  if (!user?.user_id) {
-    setError("User information is missing");
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const response = await axios.put(`${baseURL}/users/${user.user_id}/`, {
-      password: password,
-      security_question1: q1,
-      security_question2: q2,
-      security_answer1: a1,
-      security_answer2: a2,
-      is_registered_by_customer: true,
-    });
-
-    console.log("API Response:", response.data); // Debug log
-
-    // Check for successful response - adjust this based on your actual API response structure
-    if (response.data && (response.data.success || response.data.status === "success")) {
-      alert("Registration completed successfully!");
-      navigate("/", { replace: true }); // Force navigation even if alert is blocked
-      return; // Ensure no further execution
-    } else {
-      setError(response.data?.message || "Failed to complete registration");
+    if (password !== confirmPassword) {
+      Swal.fire({
+        icon: "error",
+        title: "Password Mismatch",
+        text: "Passwords do not match!",
+      });
+      return;
     }
-  } catch (error) {
-    console.error("Error completing registration:", error);
-    setError(
-      error.response?.data?.message || 
-      error.message ||
-      "An error occurred. Please try again later."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+
+    if (!q1 || !q2) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Questions",
+        text: "Please select both security questions.",
+      });
+      return;
+    }
+
+    if (!a1 || !a2) {
+      Swal.fire({
+        icon: "warning",
+        title: "Missing Answers",
+        text: "Please provide answers for both questions.",
+      });
+      return;
+    }
+
+    if (!user?.user_id) {
+      Swal.fire({
+        icon: "error",
+        title: "User Data Missing",
+        text: "Unable to identify user. Please start signup again.",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.put(`${baseURL}/users/${user.user_id}/`, {
+        password,
+        security_question1: q1,
+        security_question2: q2,
+        security_answer1: a1,
+        security_answer2: a2,
+        is_registered_by_customer: true,
+      });
+
+      if (response.data && (response.data.success || response.data.status === "success")) {
+        Swal.fire({
+          icon: "success",
+          title: "Registration Complete",
+          text: "You have successfully completed your registration!",
+        }).then(() => {
+          navigate("/", { replace: true });
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Registration Failed",
+          text: response.data?.message || "Failed to complete registration.",
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error Occurred",
+        text:
+          error.response?.data?.message ||
+          error.message ||
+          "Something went wrong. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="security-container">

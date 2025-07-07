@@ -7,7 +7,7 @@ import "./ServiceTable.css";
 import axios from "axios";
 import baseURL from "../../ApiUrl/Apiurl"; 
 import { useCompany } from "../../CompanyContext";
-
+import Swal from "sweetalert2";
 const ServiceTable = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
@@ -142,8 +142,11 @@ useEffect(() => {
 
 const handleAcceptClick = async (serviceId, assignmentId) => {
   if (!serviceId || !assignmentId) {
-    console.error("Missing serviceId or assignmentId");
-    return;
+  Swal.fire({
+      icon: "error",
+      title: "Missing IDs",
+      text: "Missing serviceId or assignmentId.",
+    });    return;
   }
 
   try {
@@ -166,7 +169,11 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
     const targetAssignment = assignments.find(a => a.assignment_id === assignmentId);
 
     if (!targetAssignment) {
-      console.warn("Assignment not found for assignment_id:", assignmentId);
+     Swal.fire({
+        icon: "error",
+        title: "Assignment Not Found",
+        text: `Assignment ID ${assignmentId} not found.`,
+      });
       return;
     }
 
@@ -191,10 +198,16 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
     setAcceptedServices(prev => [...prev, serviceId]);
     setDeclinedServices(prev => prev.filter(id => id !== serviceId));
 
-    alert("Status updated successfully!");
-  } catch (error) {
-    console.error("Error updating:", error.response?.data || error);
-    alert("Error updating. Check console.");
+  Swal.fire({
+      icon: "success",
+      title: "Success!",
+      text: `Service ID ${serviceId} accepted successfully.`,
+    });  } catch (error) {
+     Swal.fire({
+      icon: "error",
+      title: "Update Failed",
+      text: "Error updating status. Please check the console for more info.",
+    });
   }
 };
 

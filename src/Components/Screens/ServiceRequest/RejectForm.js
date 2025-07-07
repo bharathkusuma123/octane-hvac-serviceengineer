@@ -5,6 +5,7 @@ import Navbar from "../Navbar/Navbar";
 import "./RejectForm.css";
 import axios from "axios";
 import baseURL from "../../ApiUrl/Apiurl";
+import Swal from "sweetalert2"; // ✅ Added SweetAlert2
 
 const RejectFormScreen = () => {
   const location = useLocation();
@@ -13,51 +14,52 @@ const RejectFormScreen = () => {
   const [reason, setReason] = useState("");
   const userId = localStorage.getItem("userId"); // Get the current user ID
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
 
-  const serviceId = service.request_id || service.id;
-  const assignmentId = service.assignment_id;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!assignmentId || !serviceId) {
-    alert("Invalid assignment or service ID");
-    return;
-  }
+    const serviceId = service.request_id || service.id;
+    const assignmentId = service.assignment_id;
 
-  try {
-    // Step 1: Update assignment-history (mark as Declined)
-    await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, {
-      status: "Declined",
-      decline_reason: reason,
-    });
-
-    console.log("Assignment updated:", assignmentId, "Reason:", reason);
-
-    // Step 2: Update service-pools (mark as Unassigned)
-    await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
-      status: "Open",
-    });
-
-    console.log("Service status set to Unassigned:", serviceId);
-    navigate("/service-table");
-  } catch (error) {
-    console.error("Error updating service or assignment:", {
-      error: error.response ? error.response.data : error.message,
-      config: error.config,
-    });
-
-    if (error.response) {
-      console.error("Server responded with:", {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers,
+    if (!assignmentId || !serviceId) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid IDs",
+        text: "Invalid assignment or service ID.",
       });
+      return;
     }
 
-    alert("Failed to reject the service. Please try again.");
-  }
-};
+    try {
+      await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, {
+        status: "Declined",
+        decline_reason: reason,
+      });
 
+      await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
+        status: "Open",
+      });
+
+      Swal.fire({
+        icon: "success",
+        title: "Service Rejected",
+        text: `Service ID ${serviceId} has been successfully rejected.`,
+      }).then(() => {
+        navigate("/service-table");
+      });
+    } catch (error) {
+      console.error("Error updating service or assignment:", {
+        error: error.response ? error.response.data : error.message,
+        config: error.config,
+      });
+
+      Swal.fire({
+        icon: "error",
+        title: "Failed",
+        text: "Failed to reject the service. Please try again.",
+      });
+    }
+  };
 
   if (!service) {
     return <div className="text-center mt-5">No service selected.</div>;
