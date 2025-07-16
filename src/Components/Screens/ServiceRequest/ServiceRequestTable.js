@@ -54,8 +54,8 @@ useEffect(() => {
 
       // ✅ Fetch service-pools and assignment-history in parallel
       const [servicesRes, assignmentsRes] = await Promise.all([
-        axios.get(`${baseURL}/service-pools/`),
-        axios.get(`${baseURL}/assignment-history/`)
+        axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${selectedCompany}`),
+        axios.get(`${baseURL}/assignment-history/?user_id=${userId}&company_id=${selectedCompany}`)
       ]);
 
       const allServices = Array.isArray(servicesRes.data)
@@ -151,19 +151,33 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
 
   try {
     // 1. Update service-pools status
-    const serviceRes = await axios.get(`${baseURL}/service-pools/${serviceId}/`);
+     const serviceRes = await axios({
+    method: 'get',
+    url: `${baseURL}/service-pools/${serviceId}/`,
+    params: {
+      user_id: userId,
+      company_id: selectedCompany
+    }
+  });
     const serviceData = serviceRes.data;
 
     const updatedService = {
       ...serviceData,
       status: "Under Process",
+        user_id: userId,
+    company_id: selectedCompany,
     };
 
     await axios.put(`${baseURL}/service-pools/${serviceId}/`, updatedService);
     console.log("✅ service-pools status updated");
 
     // 2. Update assignment-history for the specific assignmentId
-    const assignmentRes = await axios.get(`${baseURL}/assignment-history/`);
+     const assignmentRes = await axios.get(`${baseURL}/assignment-history/`, {
+    params: {
+      user_id: userId,
+      company_id: selectedCompany
+    }
+  });
     const assignments = assignmentRes.data.data || [];
 
     const targetAssignment = assignments.find(a => a.assignment_id === assignmentId);
@@ -181,6 +195,8 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
       ...targetAssignment,
       status: "Accepted",
       updated_by: targetAssignment.updated_by || "system",
+      user_id: userId,
+    company_id: selectedCompany
     };
 
     await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, updatedAssignment);

@@ -12,7 +12,9 @@ const RejectFormScreen = () => {
   const navigate = useNavigate();
   const service = location.state?.service;
   const [reason, setReason] = useState("");
-  const userId = localStorage.getItem("userId"); // Get the current user ID
+  const userId = localStorage.getItem("userId"); // Get the current user ID 
+   const company_id= service.company; // Include company_id if needed
+   console.log("Company ID:", company_id); // Log the company ID for debugging
 
 
   const handleSubmit = async (e) => {
@@ -34,10 +36,14 @@ const RejectFormScreen = () => {
       await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, {
         status: "Declined",
         decline_reason: reason,
+        user_id: userId, // Include user_id in the update
+        company_id: company_id, // Include company_id if needed
       });
 
       await axios.put(`${baseURL}/service-pools/${serviceId}/`, {
         status: "Open",
+         user_id: userId, // Include user_id in the update
+        company_id: company_id, // Include company_id if needed
       });
 
       Swal.fire({
