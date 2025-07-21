@@ -143,7 +143,7 @@ const statusOptions = [
 const ServiceDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { service } = location.state || {};
+ const { service, userId, selectedCompany } = location.state || {};
   const [status, setStatus] = useState(service?.status || '');
   const [updating, setUpdating] = useState(false);
 
@@ -180,6 +180,8 @@ const ServiceDetails = () => {
       await axios.put(`${baseURL}/service-pools/${requestId}/`, {
         ...service,
         status: newStatus,
+        user_id: userId,
+        company_id: selectedCompany
       });
 
       Swal.fire({

@@ -231,10 +231,15 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
     navigate("/reject", { state: { service } });
   };
 
-  const handleServiceIdClick = (service) => {
-    navigate("/service-details", { state: { service } });
-  };
-
+  const handleServiceIdClick = (service, userId, selectedCompany) => {
+  navigate("/service-details", {
+    state: {
+      service,
+      userId,
+      selectedCompany,
+    },
+  });
+};
 
 
   return (
@@ -295,7 +300,7 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
                     <td 
                       className="py-3 px-3 text-primary"
                       style={{cursor: 'pointer', textDecoration: 'underline'}}
-                      onClick={() => handleServiceIdClick(service)}
+                      onClick={() => handleServiceIdClick(service, userId, selectedCompany)}
                     >
                       {service.request_id || service.id}
                     </td>
