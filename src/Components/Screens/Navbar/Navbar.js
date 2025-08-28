@@ -26,10 +26,9 @@ const NavScreen = () => {
   const [loading, setLoading] = useState(true);
 
    const handleLogout = () => {
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-      localStorage.removeItem("selectedCompany");
-    navigate("/");
+localStorage.clear();
+navigate("/");
+
   };
 
 
