@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import "./Navbar.css";
 import logo from "../../../Logos/hvac-logo-new.jpg";
+import baseURL from "../../ApiUrl/Apiurl";
 
 const screens = [
   { label: "Dashboard", name: "/dashboard", icon: <FaHome /> },
@@ -26,10 +27,9 @@ const NavScreen = () => {
   const [loading, setLoading] = useState(true);
 
    const handleLogout = () => {
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
-      localStorage.removeItem("selectedCompany");
-    navigate("/");
+localStorage.clear();
+navigate("/");
+
   };
 
 
@@ -40,7 +40,7 @@ const NavScreen = () => {
  useEffect(() => {
   const fetchUserData = async () => {
     try {
-      const response = await fetch("http://175.29.21.7:8006/users/");
+      const response = await fetch(`${baseURL}/users/`);
       const data = await response.json();
       
       const userId = localStorage.getItem("userId");

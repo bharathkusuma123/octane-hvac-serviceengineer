@@ -33,6 +33,7 @@ const handleLogin = async (e) => {
       const user = response.data.data;
 
       if (user.role === "Service Engineer") {
+         localStorage.setItem("isLoggedIn", "true");  // ✅ store login flag
         localStorage.setItem("userRole", "service engineer");
          localStorage.setItem("userId", user.user_id);    
       localStorage.setItem("userMobile", user.mobile_no);

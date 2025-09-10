@@ -19,8 +19,8 @@
 
 // export default App;
 
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./Components/Login/Login";
 // import Dashboard from './Components/Screens/Dashboard'
 import Navbar from "./Components/Screens/Navbar/Navbar";
@@ -36,33 +36,44 @@ import SignUpScreen from './Components/Login/SignUpScreen';
 import SignupSetPassword from './Components/Login/SignupSetPassword'
 import { CompanyProvider } from '../src/Components/CompanyContext';
 
+
+// 🔹 Wrapper component to handle auto-login check
+function AppWrapper() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    if (isLoggedIn === "true") {
+      navigate("/dashboard");  // ✅ Redirect to dashboard
+    }
+  }, [navigate]);
+
+  return <Login />;
+}
+
 function App() {
   return (
-     <CompanyProvider>
-    <Router>
-       
-      <div className="App">
-        
-        <Routes>
-          <Route path="/" element={<Login />} />
+    <CompanyProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* When user opens app, check if logged in */}
+            <Route path="/" element={<AppWrapper />} />
 
-          {/* <Route path="/customer-dashboard" element={<Dashboard />} /> */}
-
-          <Route path="/navbar" element={<Navbar />} />
-
-          <Route path="/dashboard" element={<DashboardScreen />} />
-          <Route path="/machine" element={<MachineScreen />} />
-          <Route path="/request" element={<RequestScreen />} />
-          <Route path="/feedback" element={<FeedbackScreen />} />
+            {/* Normal routes */}
+            <Route path="/navbar" element={<Navbar />} />
+            <Route path="/dashboard" element={<DashboardScreen />} />
+            <Route path="/machine" element={<MachineScreen />} />
+            <Route path="/request" element={<RequestScreen />} />
+            <Route path="/feedback" element={<FeedbackScreen />} />
             <Route path="/service-table" element={<ServiceRequestTable />} />
-           <Route path="/reject" element={<RejectForm />} />
+            <Route path="/reject" element={<RejectForm />} />
             <Route path="/service-details" element={<ServiceDetails />} />
-            <Route path="/signup" element={<SignUpScreen />} /> {/* Added signup route */}
-           <Route path="/signupset-password-screen" element={<SignupSetPassword />} /> {/* Added signup route */}
-
-        </Routes>
-      </div>
-    </Router>
+            <Route path="/signup" element={<SignUpScreen />} />
+            <Route path="/signupset-password-screen" element={<SignupSetPassword />} />
+          </Routes>
+        </div>
+      </Router>
     </CompanyProvider>
   );
 }
