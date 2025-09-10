@@ -100,7 +100,7 @@ const handleLogin = async (e) => {
 
           <button type="submit" className="loginButton shadow">LOGIN</button>
 
-          <button type="button" className="socialButton">
+          {/* <button type="button" className="socialButton">
             <img src={googleicon} alt="Google Icon" className="socialIcon" />
             <span className="socialText">Login with Google ID</span>
           </button>
@@ -108,7 +108,7 @@ const handleLogin = async (e) => {
           <button className="socialButton black">
             <FaApple className="socialIcon" color="#fff" />
             <span className="socialText white">Login with Apple ID</span>
-          </button>
+          </button> */}
 
           <p className="orText">Or</p>
           <p className="registerText">
