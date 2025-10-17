@@ -20,34 +20,49 @@ export default function Login() {
   const passwordRef = useRef();
   const navigate = useNavigate();
 
+// Login.js - Update the handleLogin function
 const handleLogin = async (e) => {
   e.preventDefault();
 
- try {
-      
-      const response = await axios.post(`${baseURL}/user-login/`, {
-        username,
+  try {
+    const response = await axios.post(`${baseURL}/user-login/`, {
+      username,
       password,
-      });
+    });
 
-      const user = response.data.data;
+    const user = response.data.data;
 
-      if (user.role === "Service Engineer") {
-         localStorage.setItem("isLoggedIn", "true");  // ✅ store login flag
-        localStorage.setItem("userRole", "service engineer");
-         localStorage.setItem("userId", user.user_id);    
+    if (user.role === "Service Engineer") {
+      // ✅ Store all necessary data in localStorage
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userRole", "service engineer");
+      localStorage.setItem("userId", user.user_id);
       localStorage.setItem("userMobile", user.mobile_no);
-        navigate("/dashboard", { state: { userMobile: user.mobile_no } });
-        console.log("User data from API:", user);
-        console.log("Stored userId:", localStorage.getItem("userId"));
-      } else {
-        setError("User is not an Customer");
+      
+      // Make sure selectedCompany is set if available from API
+      if (user.company_id) {
+        localStorage.setItem("selectedCompany", user.company_id);
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Invalid mobile number or password");
+      
+      console.log("User data from API:", user);
+      console.log("Stored userId:", localStorage.getItem("userId"));
+      
+      // Navigate after ensuring data is stored
+      navigate("/dashboard", { 
+        state: { 
+          userMobile: user.mobile_no,
+          userId: user.user_id,
+          userData: user // Pass the entire user object
+        } 
+      });
+    } else {
+      setError("User is not a Service Engineer");
     }
-  };
+  } catch (err) {
+    console.error("Login error:", err);
+    setError("Invalid mobile number or password");
+  }
+};
 
 
   return (
@@ -89,12 +104,12 @@ const handleLogin = async (e) => {
 
           <div className="checkboxContainer">
             <label className="switchLabel">
-              <input
+              {/* <input
                 type="checkbox"
                 checked={autoLogin}
                 onChange={(e) => setAutoLogin(e.target.checked)}
               />
-              <span className="label">Auto Login</span>
+              <span className="label">Auto Login</span> */}
             </label>
             <span className="forgot" onClick={() => navigate('/security')}>Forgot Password/Pin?</span>
           </div>
@@ -110,12 +125,12 @@ const handleLogin = async (e) => {
             <FaApple className="socialIcon" color="#fff" />
             <span className="socialText white">Login with Apple ID</span>
           </button> */}
-
+{/* 
           <p className="orText">Or</p>
           <p className="registerText">
             Don’t have an account?{' '}
             <span className="registerLink" onClick={() => navigate('/signup')}>Register</span>
-          </p>
+          </p> */}
 
           <img src={greenaire} alt="Green Aire" className="footerLogo" />
         </form>

@@ -21,99 +21,112 @@ const ServiceTable = () => {
   const [itemsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      console.log("🔹 Selected Company:", selectedCompany);
-      console.log("🔹 User ID:", userId);
 
-      if (!selectedCompany || !userId) {
-        console.warn("selectedCompany or userId not ready yet");
-        return;
+const fetchData = async () => {
+  try {
+    console.log("🔹 Selected Company:", selectedCompany);
+    console.log("🔹 User ID:", userId);
+
+    if (!selectedCompany || !userId) {
+      console.warn("selectedCompany or userId not ready yet");
+      return;
+    }
+
+    // ✅ Fetch resource by company_id and user_id
+    const resourceUrl = `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`;
+    // console.log("Fetching Resource from:", resourceUrl);
+
+    const resourceRes = await axios.get(resourceUrl);
+    const resourceData = resourceRes.data?.data || [];
+
+    const currentResource = resourceData.find(res => res.user === userId);
+    const extractedResourceId = currentResource?.resource_id;
+
+    // console.log("Extracted resource_id:", extractedResourceId);
+
+    setResourceId(extractedResourceId);
+
+    if (!extractedResourceId) {
+      // console.warn("No matching resource_id found for this user.");
+      setServices([]);
+      return;
+    }
+
+    // ✅ Fetch service-pools and assignment-history in parallel
+    const [servicesRes, assignmentsRes] = await Promise.all([
+      axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${selectedCompany}`),
+      axios.get(`${baseURL}/assignment-history/?user_id=${userId}&company_id=${selectedCompany}`)
+    ]);
+
+    const allServices = Array.isArray(servicesRes.data)
+      ? servicesRes.data
+      : servicesRes.data.data || [];
+
+    let assignments = Array.isArray(assignmentsRes.data)
+      ? assignmentsRes.data
+      : assignmentsRes.data.data || [];
+
+    // 🔽 Sort assignments by latest date
+    assignments.sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+
+    // ✅ Latest assignment per (request_id, assigned_engineer)
+    const userAssignmentMap = {};
+    assignments.forEach(item => {
+      const key = `${item.request}_${item.assigned_engineer}`;
+      if (!userAssignmentMap[key]) {
+        userAssignmentMap[key] = item;
       }
+    });
 
-      // ✅ Fetch resource by company_id and user_id
-      const resourceUrl = `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`;
-      // console.log("Fetching Resource from:", resourceUrl);
+    const assignedToUser = allServices
+      .filter(service =>
+        service.assigned_engineer === extractedResourceId ||
+        Object.values(userAssignmentMap).some(
+          assignment =>
+            assignment.request === service.request_id &&
+            assignment.assigned_engineer === extractedResourceId
+        )
+      )
+      .map(service => {
+        const userAssignment = Object.values(userAssignmentMap).find(
+          assignment =>
+            assignment.request === service.request_id &&
+            assignment.assigned_engineer === extractedResourceId
+        );
 
-      const resourceRes = await axios.get(resourceUrl);
-      const resourceData = resourceRes.data?.data || [];
-
-      const currentResource = resourceData.find(res => res.user === userId);
-      const extractedResourceId = currentResource?.resource_id;
-
-      // console.log("Extracted resource_id:", extractedResourceId);
-
-      setResourceId(extractedResourceId);
-
-      if (!extractedResourceId) {
-        // console.warn("No matching resource_id found for this user.");
-        setServices([]);
-        return;
-      }
-
-      // ✅ Fetch service-pools and assignment-history in parallel
-      const [servicesRes, assignmentsRes] = await Promise.all([
-        axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${selectedCompany}`),
-        axios.get(`${baseURL}/assignment-history/?user_id=${userId}&company_id=${selectedCompany}`)
-      ]);
-
-      const allServices = Array.isArray(servicesRes.data)
-        ? servicesRes.data
-        : servicesRes.data.data || [];
-
-      let assignments = Array.isArray(assignmentsRes.data)
-        ? assignmentsRes.data
-        : assignmentsRes.data.data || [];
-
-      // 🔽 Sort assignments by latest date
-      assignments.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
-
-      // ✅ Latest assignment per (request_id, assigned_engineer)
-      const userAssignmentMap = {};
-      assignments.forEach(item => {
-        const key = `${item.request}_${item.assigned_engineer}`;
-        if (!userAssignmentMap[key]) {
-          userAssignmentMap[key] = item;
-        }
+        return {
+          ...service,
+          assignment_id: userAssignment?.assignment_id || null,
+          assignment_status: userAssignment?.status || service.status || "Pending",
+          assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
+          is_current_user_assignment:
+            userAssignment?.assigned_engineer === extractedResourceId,
+          // Add assignment created_at for sorting
+          assignment_created_at: userAssignment?.created_at || service.created_at
+        };
       });
 
-      const assignedToUser = allServices
-        .filter(service =>
-          service.assigned_engineer === extractedResourceId ||
-          Object.values(userAssignmentMap).some(
-            assignment =>
-              assignment.request === service.request_id &&
-              assignment.assigned_engineer === extractedResourceId
-          )
-        )
-        .map(service => {
-          const userAssignment = Object.values(userAssignmentMap).find(
-            assignment =>
-              assignment.request === service.request_id &&
-              assignment.assigned_engineer === extractedResourceId
-          );
+    // 🔽 SORT SERVICES BY LATEST DATE (Most recent first)
+    assignedToUser.sort((a, b) => {
+      // Prioritize assignment date, fallback to service creation date
+      const dateA = new Date(a.assignment_created_at || a.created_at);
+      const dateB = new Date(b.assignment_created_at || b.created_at);
+      return dateB - dateA; // Descending order (newest first)
+    });
 
-          return {
-            ...service,
-            assignment_id: userAssignment?.assignment_id || null,
-            assignment_status: userAssignment?.status || service.status || "Pending",
-            assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
-            is_current_user_assignment:
-              userAssignment?.assigned_engineer === extractedResourceId
-          };
-        });
+    console.log("✅ Assigned services count:", assignedToUser.length);
+    console.log("📅 Services sorted by latest date (most recent first)");
+    
+    setServices(assignedToUser);
+    setFilteredServices(assignedToUser);
+  } catch (error) {
+    console.error("🔴 Error fetching data:", error.response?.data || error.message || error);
+  }
+};
 
-      console.log("✅ Assigned services count:", assignedToUser.length);
-      setServices(assignedToUser);
-      setFilteredServices(assignedToUser);
-    } catch (error) {
-      console.error("🔴 Error fetching data:", error.response?.data || error.message || error);
-    }
-  };
-
+useEffect(() => {
   if (selectedCompany && userId) {
     fetchData();
   }
@@ -142,48 +155,55 @@ useEffect(() => {
 
 const handleAcceptClick = async (serviceId, assignmentId) => {
   if (!serviceId || !assignmentId) {
-  Swal.fire({
+    Swal.fire({
       icon: "error",
       title: "Missing IDs",
       text: "Missing serviceId or assignmentId.",
-    });    return;
+    });
+    return;
   }
 
   try {
     // 1. Update service-pools status
-     const serviceRes = await axios({
-    method: 'get',
-    url: `${baseURL}/service-pools/${serviceId}/`,
-    params: {
-      user_id: userId,
-      company_id: selectedCompany
-    }
-  });
+    const serviceRes = await axios({
+      method: 'get',
+      url: `${baseURL}/service-pools/${serviceId}/`,
+      params: {
+        user_id: userId,
+        company_id: selectedCompany
+      }
+    });
+    
     const serviceData = serviceRes.data;
-
     const updatedService = {
       ...serviceData,
       status: "Under Process",
-        user_id: userId,
-    company_id: selectedCompany,
+      user_id: userId,
+      company_id: selectedCompany,
     };
 
     await axios.put(`${baseURL}/service-pools/${serviceId}/`, updatedService);
     console.log("✅ service-pools status updated");
 
-    // 2. Update assignment-history for the specific assignmentId
-     const assignmentRes = await axios.get(`${baseURL}/assignment-history/`, {
-    params: {
-      user_id: userId,
-      company_id: selectedCompany
-    }
-  });
-    const assignments = assignmentRes.data.data || [];
-
-    const targetAssignment = assignments.find(a => a.assignment_id === assignmentId);
+    // 2. Update assignment-history - FIXED ENDPOINT
+    // First, get all assignments to find the correct one
+    const assignmentRes = await axios.get(`${baseURL}/assignment-history/`, {
+      params: {
+        user_id: userId,
+        company_id: selectedCompany,
+        assignment_id: assignmentId // Filter by assignment_id if supported
+      }
+    });
+    
+    const assignments = assignmentRes.data.data || assignmentRes.data || [];
+    
+    // Find the specific assignment
+    const targetAssignment = Array.isArray(assignments) 
+      ? assignments.find(a => a.assignment_id === assignmentId)
+      : assignments;
 
     if (!targetAssignment) {
-     Swal.fire({
+      Swal.fire({
         icon: "error",
         title: "Assignment Not Found",
         text: `Assignment ID ${assignmentId} not found.`,
@@ -191,38 +211,37 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
       return;
     }
 
+    // Update the assignment - use the correct identifier (might be 'id' instead of 'assignment_id')
     const updatedAssignment = {
       ...targetAssignment,
       status: "Accepted",
       updated_by: targetAssignment.updated_by || "system",
       user_id: userId,
-    company_id: selectedCompany
+      company_id: selectedCompany
     };
 
-    await axios.put(`${baseURL}/assignment-history/${assignmentId}/`, updatedAssignment);
-    console.log("assignment-history updated");
+    // Use the correct identifier for the PUT request
+    // Try using the assignment's ID if assignment_id doesn't work
+    await axios.put(`${baseURL}/assignment-history/${targetAssignment.id || assignmentId}/`, updatedAssignment);
+    console.log("✅ assignment-history updated");
 
-    // 3. Update local state
-    setServices(prev =>
-      prev.map(s =>
-        s.request_id === serviceId
-          ? { ...s, status: "Under Process", assignment_status: "Accepted" }
-          : s
-      )
-    );
+    // 3. REFRESH DATA - Call the same fetch logic as in useEffect
+    await fetchData();
 
-    setAcceptedServices(prev => [...prev, serviceId]);
-    setDeclinedServices(prev => prev.filter(id => id !== serviceId));
-
-  Swal.fire({
+    Swal.fire({
       icon: "success",
       title: "Success!",
       text: `Service ID ${serviceId} accepted successfully.`,
-    });  } catch (error) {
-     Swal.fire({
+      timer: 1500,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error("🔴 Error in handleAcceptClick:", error.response?.data || error.message);
+    Swal.fire({
       icon: "error",
       title: "Update Failed",
-      text: "Error updating status. Please check the console for more info.",
+      text: error.response?.data?.message || "Error updating status. Please try again.",
     });
   }
 };

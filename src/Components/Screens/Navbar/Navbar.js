@@ -11,6 +11,7 @@ import {
 import "./Navbar.css";
 import logo from "../../../Logos/hvac-logo-new.jpg";
 import baseURL from "../../ApiUrl/Apiurl";
+import { useCompany } from "../../CompanyContext"; // Import the context
 
 const screens = [
   { label: "Dashboard", name: "/dashboard", icon: <FaHome /> },
@@ -23,72 +24,70 @@ const NavScreen = () => {
   const location = useLocation();
   const [activeIcon, setActiveIcon] = useState(location.pathname);
   const [userData, setUserData] = useState(null);
-  const [selectedCompany, setSelectedCompany] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Use CompanyContext instead of local state
+  const { selectedCompany, updateCompany } = useCompany();
 
-   const handleLogout = () => {
-localStorage.clear();
-navigate("/");
-
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/");
   };
-
 
   useEffect(() => {
     setActiveIcon(location.pathname);
   }, [location.pathname]);
 
- useEffect(() => {
-  const fetchUserData = async () => {
-    try {
-      const response = await fetch(`${baseURL}/users/`);
-      const data = await response.json();
-      
-      const userId = localStorage.getItem("userId");
-      const currentUser = data.find(user => user.user_id === userId && user.role === "Service Engineer");
-      
-      if (currentUser) {
-        setUserData(currentUser);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch(`${baseURL}/users/`);
+        const data = await response.json();
         
-        // Initialize selected company with proper fallback logic
-        let initialCompany = "";
+        const userId = localStorage.getItem("userId");
+        const currentUser = data.find(user => user.user_id === userId && user.role === "Service Engineer");
         
-        // 1. Check if we have a saved company in localStorage
-        const savedCompany = localStorage.getItem("selectedCompany");
-        
-        // 2. If not, use the user's default_company
-        if (!savedCompany) {
-          initialCompany = currentUser.default_company || "";
-        } else {
-          // Verify the saved company exists in the user's companies
-          if (currentUser.companies.includes(savedCompany)) {
-            initialCompany = savedCompany;
-          } else {
-            // If saved company is invalid, fall back to default
+        if (currentUser) {
+          setUserData(currentUser);
+          
+          // Initialize selected company with proper fallback logic
+          let initialCompany = "";
+          
+          // 1. Check if we have a saved company in context/localStorage
+          const savedCompany = selectedCompany;
+          
+          // 2. If not, use the user's default_company
+          if (!savedCompany) {
             initialCompany = currentUser.default_company || "";
+          } else {
+            // Verify the saved company exists in the user's companies
+            if (currentUser.companies.includes(savedCompany)) {
+              initialCompany = savedCompany;
+            } else {
+              // If saved company is invalid, fall back to default
+              initialCompany = currentUser.default_company || "";
+            }
+          }
+          
+          // 3. Final fallback - use first company if nothing else is set
+          if (!initialCompany && currentUser.companies?.length > 0) {
+            initialCompany = currentUser.companies[0];
+          }
+          
+          // Update the context with the initial company
+          if (initialCompany && initialCompany !== selectedCompany) {
+            updateCompany(initialCompany);
           }
         }
-        
-        // 3. Final fallback - use first company if nothing else is set
-        if (!initialCompany && currentUser.companies?.length > 0) {
-          initialCompany = currentUser.companies[0];
-        }
-        
-        setSelectedCompany(initialCompany);
-        
-        // Store the initial selection if it wasn't in localStorage
-        if (!savedCompany && initialCompany) {
-          localStorage.setItem("selectedCompany", initialCompany);
-        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchUserData();
-}, []);
+    fetchUserData();
+  }, []); // Remove selectedCompany from dependencies
 
   const handleIconClick = (path) => {
     navigate(path);
@@ -96,11 +95,9 @@ navigate("/");
 
   const handleCompanyChange = (e) => {
     const companyId = e.target.value;
-    setSelectedCompany(companyId);
-    // Store selection in localStorage
-    localStorage.setItem("selectedCompany", companyId);
-    // You might want to add additional logic here when company changes
-    // For example: refresh data, update context, etc.
+    // Use the context function to update company
+    updateCompany(companyId);
+    // No need to manually set localStorage - it's handled in the context
   };
 
   if (loading) {
@@ -117,7 +114,7 @@ navigate("/");
         {userData && (
           <select
             className="form-select ms-3"
-            value={selectedCompany}
+            value={selectedCompany} // Use from context
             onChange={handleCompanyChange}
             style={{ minWidth: "150px" }}
           >
