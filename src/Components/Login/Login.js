@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import './Login.css';
 import { FaUser, FaLock } from 'react-icons/fa';
@@ -16,54 +15,68 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [autoLogin, setAutoLogin] = useState(false);
   const [secureText, setSecureText] = useState(true);
-   const [error, setError] = useState("");
+  const [error, setError] = useState("");
   const passwordRef = useRef();
   const navigate = useNavigate();
 
-// Login.js - Update the handleLogin function
-const handleLogin = async (e) => {
-  e.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
 
-  try {
-    const response = await axios.post(`${baseURL}/user-login/`, {
-      username,
-      password,
-    });
+    try {
+      let fcmToken = '';
 
-    const user = response.data.data;
-
-    if (user.role === "Service Engineer") {
-      // ✅ Store all necessary data in localStorage
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userRole", "service engineer");
-      localStorage.setItem("userId", user.user_id);
-      localStorage.setItem("userMobile", user.mobile_no);
-      
-      // Make sure selectedCompany is set if available from API
-      if (user.company_id) {
-        localStorage.setItem("selectedCompany", user.company_id);
+      // ✅ Use Expo-provided token if available
+      if (window.ReactNativeWebView && window.fcmToken) {
+        fcmToken = window.fcmToken;
+        console.log("Using Expo token:", fcmToken);
       }
-      
-      console.log("User data from API:", user);
-      console.log("Stored userId:", localStorage.getItem("userId"));
-      
-      // Navigate after ensuring data is stored
-      navigate("/dashboard", { 
-        state: { 
-          userMobile: user.mobile_no,
-          userId: user.user_id,
-          userData: user // Pass the entire user object
-        } 
-      });
-    } else {
-      setError("User is not a Service Engineer");
-    }
-  } catch (err) {
-    console.error("Login error:", err);
-    setError("Invalid mobile number or password");
-  }
-};
 
+      const response = await axios.post(`${baseURL}/user-login/`, {
+        username,
+        password,
+        fcm_token: fcmToken, // ✅ Send token to backend
+      });
+
+      const user = response.data.data;
+
+      if (user.role === "Service Engineer") {
+        // ✅ Store all necessary data in localStorage
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userRole", "service engineer");
+        localStorage.setItem("userId", user.user_id);
+        localStorage.setItem("userMobile", user.mobile_no);
+
+        if (user.company_id) {
+          localStorage.setItem("selectedCompany", user.company_id);
+        }
+
+        console.log("User data from API:", user);
+        console.log("Stored userId:", localStorage.getItem("userId"));
+
+        // ✅ Send login message to Expo for React Native WebView
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(
+            JSON.stringify({ type: 'login', userId: user.user_id })
+          );
+        }
+
+        // Navigate to dashboard
+        navigate("/dashboard", { 
+          state: { 
+            userMobile: user.mobile_no,
+            userId: user.user_id,
+            userData: user
+          } 
+        });
+      } else {
+        setError("User is not a Service Engineer");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Invalid mobile number or password");
+    }
+  };
 
   return (
     <div className="container">
@@ -103,7 +116,7 @@ const handleLogin = async (e) => {
           </div>
 
           <div className="checkboxContainer">
-            <label className="switchLabel">
+             <label className="switchLabel">
               {/* <input
                 type="checkbox"
                 checked={autoLogin}
@@ -114,9 +127,10 @@ const handleLogin = async (e) => {
             <span className="forgot" onClick={() => navigate('/security')}>Forgot Password/Pin?</span>
           </div>
 
-          <button type="submit" className="loginButton shadow">LOGIN</button>
+          {error && <p className="errorText">{error}</p>}
 
-          {/* <button type="button" className="socialButton">
+          <button type="submit" className="loginButton shadow">LOGIN</button>
+           {/* <button type="button" className="socialButton">
             <img src={googleicon} alt="Google Icon" className="socialIcon" />
             <span className="socialText">Login with Google ID</span>
           </button>
