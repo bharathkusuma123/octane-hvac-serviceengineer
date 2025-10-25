@@ -22,7 +22,7 @@
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./Components/Login/Login";
-// import Dashboard from './Components/Screens/Dashboard'
+ import ProfileDetails from './Components/Screens/Profile/ProfileDetails'
 import Navbar from "./Components/Screens/Navbar/Navbar";
 import DashboardScreen from "./Components/Screens/DashboardScreen/Dashboard";
 import MachineScreen from "./Components/Screens/MachineScreen/Machine";
@@ -63,6 +63,8 @@ function App() {
             {/* Normal routes */}
             <Route path="/navbar" element={<Navbar />} />
             <Route path="/dashboard" element={<DashboardScreen />} />
+                        <Route path="/profile-details" element={<ProfileDetails />} />
+
             <Route path="/machine" element={<MachineScreen />} />
             <Route path="/request" element={<RequestScreen />} />
             <Route path="/feedback" element={<FeedbackScreen />} />

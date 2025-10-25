@@ -297,6 +297,7 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
                 <th className="py-3 px-3">S.No</th>
                 <th className="py-3 px-3">Service ID</th>
                 <th className="py-3 px-3">Customer</th>
+                <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-3">Action</th>
               </tr>
             </thead>
@@ -329,6 +330,12 @@ const handleAcceptClick = async (serviceId, assignmentId) => {
                      
                     >
                      {service.customer || "N/A"}
+                    </td>
+                      <td 
+                      className="py-3 px-3 text-primary"
+                     
+                    >
+                     {service.status || "N/A"}
                     </td>
 <td className="py-3 px-3">
   {service.status === "Under Process" ? (

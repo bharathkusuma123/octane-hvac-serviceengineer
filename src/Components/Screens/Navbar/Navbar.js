@@ -15,8 +15,9 @@ import { useCompany } from "../../CompanyContext"; // Import the context
 
 const screens = [
   { label: "Dashboard", name: "/dashboard", icon: <FaHome /> },
-  // { label: "Machines", name: "/machine", icon: <FaCogs /> },
   { label: "Requests", name: "/service-table", icon: <FaEnvelope /> },
+    { label: "Profile", name: "/profile-details", icon: <FaCogs /> },
+
 ];
 
 const NavScreen = () => {
