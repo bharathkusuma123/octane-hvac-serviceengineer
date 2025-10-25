@@ -144,6 +144,7 @@ const ServiceDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
  const { service, userId, selectedCompany } = location.state || {};
+ console.log("service details",JSON.stringify(service, null, 2));
   const [status, setStatus] = useState(service?.status || '');
   const [updating, setUpdating] = useState(false);
 
@@ -200,6 +201,27 @@ const ServiceDetails = () => {
       setUpdating(false);
     }
   };
+  const formatDateTime = (date, time) => {
+  if (!date && !time) return 'N/A';
+  
+  try {
+    // Handle combined datetime (ISO format)
+    const dt = new Date(time ? `${date}T${time}` : date);
+
+    // Format it nicely
+    return dt.toLocaleString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch (error) {
+    return 'Invalid Date';
+  }
+};
+
 
   return (
     <>
@@ -212,13 +234,23 @@ const ServiceDetails = () => {
             </h5>
 
             <div className="mt-4">
-              <h6>Details:</h6>
+              <h6>Details:</h6> 
               <div className="row mt-3">
                 <div className="col-md-6">
                   <p><strong>Request Details:</strong> {service.request_details || 'N/A'}</p>
                   <p><strong>Estimated Completion:</strong> {service.estimated_completion_time || 'N/A'}</p>
-                  <p><strong>Start Date & Time:</strong> {service.est_start_datetime || 'N/A'}</p>
-                  <p><strong>End Date & Time:</strong> {service.est_end_datetime || 'N/A'}</p>
+<p><strong>Preferred Date & Time:</strong> 
+  {formatDateTime(service.preferred_date, service.preferred_time)}
+</p>
+
+<p><strong>Start Date & Time:</strong> 
+  {formatDateTime(service.est_start_datetime)}
+</p>
+
+<p><strong>End Date & Time:</strong> 
+  {formatDateTime(service.est_end_datetime)}
+</p>
+
                 </div>
               </div>
             </div>

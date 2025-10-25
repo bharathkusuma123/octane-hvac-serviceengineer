@@ -15,7 +15,7 @@ import { useCompany } from "../../CompanyContext"; // Import the context
 
 const screens = [
   { label: "Dashboard", name: "/dashboard", icon: <FaHome /> },
-  { label: "Machines", name: "/machine", icon: <FaCogs /> },
+  // { label: "Machines", name: "/machine", icon: <FaCogs /> },
   { label: "Requests", name: "/service-table", icon: <FaEnvelope /> },
 ];
 
