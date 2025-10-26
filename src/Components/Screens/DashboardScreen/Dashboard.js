@@ -8,18 +8,11 @@ import { useLocation } from 'react-router-dom';
 const Dashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
   const [resourceId, setResourceId] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
 
-  // Static status data for the cards
-  const [statusData, setStatusData] = useState({
-    pending: 12,
-    completed: 28,
-    inProgress: 8,
-    onHold: 5
-  });
-
-  // Get userId from multiple sources for reliability
+  // Get userId and companyId from storage or location
   const getUserId = () => {
     return localStorage.getItem("userId") || (location.state && location.state.userId);
   };
@@ -29,24 +22,23 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchUserAndResource = async () => {
+    const fetchDashboardData = async () => {
       const userId = getUserId();
       const selectedCompany = getSelectedCompany();
 
-      if (!userId) {
-        console.error("No user ID found");
+      if (!userId || !selectedCompany) {
+        console.error("Missing user ID or company ID");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        
-        // Option 1: Use data passed from login via state (immediately available)
+
+        // Fetch user details (if not already available)
         if (location.state && location.state.userData) {
           setUserDetails(location.state.userData);
         } else {
-          // Option 2: Fetch from API (fallback)
           const userResponse = await axios.get(`${baseURL}/users/`);
           const matchedUser = userResponse.data.find(user => user.user_id === userId);
           if (matchedUser) {
@@ -54,68 +46,39 @@ const Dashboard = () => {
           }
         }
 
-        // Fetch resource data only if selectedCompany is available
-        if (selectedCompany) {
-          const resourceResponse = await axios.get(
-            `${baseURL}/resources/?user_id=${userId}&company_id=${selectedCompany}`
-          );
-
-          const matchedResource = resourceResponse.data?.data?.find(
-            (resource) => resource.user === userId
-          );
-
-          if (matchedResource) {
-            setResourceId(matchedResource.resource_id);
-          }
+        // Fetch resource ID (optional)
+        const resourceResponse = await axios.get(
+          `${baseURL}/resources/?user_id=${userId}&company_id=${selectedCompany}`
+        );
+        const matchedResource = resourceResponse.data?.data?.find(
+          (resource) => resource.user === userId
+        );
+        if (matchedResource) {
+          setResourceId(matchedResource.resource_id);
         }
+
+        // Fetch dashboard data (Assigned, Completed, Pending)
+        const dashboardResponse = await axios.get(
+          `${baseURL}/service-engineer/dashboard/?user_id=${userId}&company_id=${selectedCompany}`
+        );
+
+        if (dashboardResponse.data.status === "success") {
+          setDashboardData(dashboardResponse.data.data);
+        } else {
+          console.error("Failed to fetch dashboard stats");
+        }
+
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching dashboard data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    // Small timeout to ensure localStorage is updated
-    const timer = setTimeout(() => {
-      fetchUserAndResource();
-    }, 100);
-
+    const timer = setTimeout(fetchDashboardData, 100);
     return () => clearTimeout(timer);
   }, [location.state]);
 
-  // Status card data configuration
-  const statusCards = [
-    {
-      title: "Pending",
-      count: statusData.pending,
-      color: "#FF6B6B",
-      icon: "⏳",
-      bgColor: "#FFF5F5"
-    },
-    {
-      title: "Completed",
-      count: statusData.completed,
-      color: "#51CF66",
-      icon: "✅",
-      bgColor: "#F8FFF9"
-    },
-    {
-      title: "In Progress",
-      count: statusData.inProgress,
-      color: "#339AF0",
-      icon: "🚀",
-      bgColor: "#F3F8FF"
-    },
-    {
-      title: "On Hold",
-      count: statusData.onHold,
-      color: "#FF922B",
-      icon: "⏸️",
-      bgColor: "#FFF9F2"
-    }
-  ];
-
-  // Show loading state
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -123,8 +86,7 @@ const Dashboard = () => {
         <div className="dashboard-content">
           <h2>Dashboard</h2>
           <div className="loading-state">
-            <div className="spinner"></div>
-            <p>Loading user details...</p>
+            <p>Loading dashboard data...</p>
           </div>
         </div>
       </div>
@@ -135,75 +97,45 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <Navbar />
       <div className="dashboard-content">
-        <div className="dashboard-header">
-          <h1 className="dashboard-title">Dashboard</h1>
-          {userDetails && (
-            <div className="user-welcome">
-              <p>Welcome back, <strong>{userDetails.name || userDetails.username}</strong>!</p>
-            </div>
-          )}
-        </div>
+        {/* <h2>Service Engineer Dashboard</h2> */}
 
-        {/* Status Cards Grid */}
-        <div className="status-cards-grid">
-          {statusCards.map((card, index) => (
-            <div 
-              key={index} 
-              className="status-card"
-              style={{ backgroundColor: card.bgColor }}
-            >
-              <div className="card-content">
-                <div className="card-icon" style={{ color: card.color }}>
-                  {card.icon}
-                </div>
-                <div className="card-info">
-                  <h3 className="card-count" style={{ color: card.color }}>
-                    {card.count}
-                  </h3>
-                  <p className="card-title">{card.title}</p>
-                </div>
-              </div>
-              <div 
-                className="card-footer" 
-                style={{ backgroundColor: card.color }}
-              ></div>
-            </div>
-          ))}
-        </div>
+        {/* {userDetails && (
+          <div className="user-summary">
+            <p><strong>Engineer:</strong> {userDetails.full_name || userDetails.username}</p>
+            <p><strong>User ID:</strong> {userDetails.user_id}</p>
+            <p><strong>Company ID:</strong> {getSelectedCompany()}</p>
+          </div>
+        )} */}
 
-        {/* Additional Dashboard Content */}
-        <div className="dashboard-main-content">
-          <div className="content-section">
-            <h2>Recent Activity</h2>
-            <div className="activity-list">
-              <div className="activity-item">
-                <span className="activity-bullet" style={{backgroundColor: '#339AF0'}}></span>
-                <p>Project "Website Redesign" updated to In Progress</p>
-                <span className="activity-time">2 hours ago</span>
-              </div>
-              <div className="activity-item">
-                <span className="activity-bullet" style={{backgroundColor: '#51CF66'}}></span>
-                <p>Task "Homepage Layout" marked as Completed</p>
-                <span className="activity-time">5 hours ago</span>
-              </div>
-              <div className="activity-item">
-                <span className="activity-bullet" style={{backgroundColor: '#FF6B6B'}}></span>
-                <p>New task "Mobile Optimization" assigned to you</p>
-                <span className="activity-time">1 day ago</span>
-              </div>
+        {dashboardData ? (
+          <div className="stats-container">
+            <div className="stat-card assigned">
+              <h3>Total Assigned</h3>
+              <p>{dashboardData.total_assigned}</p>
+            </div>
+            <div className="stat-card completed">
+              <h3>Completed</h3>
+              <p>{dashboardData.completed}</p>
+            </div>
+            <div className="stat-card pending">
+              <h3>Pending</h3>
+              <p>{dashboardData.pending}</p>
             </div>
           </div>
+        ) : (
+          <div className="error-state">
+            <p>Failed to load dashboard data</p>
+            <button onClick={() => window.location.reload()} className="retry-button">
+              Retry
+            </button>
+          </div>
+        )}
 
-          {resourceId && (
-            <div className="content-section">
-              <h2>Resource Information</h2>
-              <div className="resource-info">
-                <p><strong>Resource ID:</strong> {resourceId}</p>
-                <p><strong>Company:</strong> {getSelectedCompany()}</p>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* {resourceId && (
+          <div className="resource-info">
+            <p><strong>Resource ID:</strong> {resourceId}</p>
+          </div>
+        )} */}
       </div>
     </div>
   );
