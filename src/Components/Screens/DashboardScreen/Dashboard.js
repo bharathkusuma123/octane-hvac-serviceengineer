@@ -3,37 +3,39 @@ import "./Dashboard.css";
 import Navbar from "../../Screens/Navbar/Navbar";
 import axios from "axios";
 import baseURL from '../../ApiUrl/Apiurl';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useCompany } from '../../CompanyContext';
 
 const Dashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
   const [resourceId, setResourceId] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const location = useLocation();
 
+  const navigate = useNavigate();
   // Get userId and companyId from storage or location
   const getUserId = () => {
     return localStorage.getItem("userId") || (location.state && location.state.userId);
   };
 
-  const getSelectedCompany = () => {
-    return localStorage.getItem("selectedCompany");
-  };
+ const { selectedCompany, updateCompany } = useCompany();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       const userId = getUserId();
-      const selectedCompany = getSelectedCompany();
 
       if (!userId || !selectedCompany) {
         console.error("Missing user ID or company ID");
+        setError("Please select a company to view dashboard");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
+        setError(null);
 
         // Fetch user details (if not already available)
         if (location.state && location.state.userData) {
@@ -66,10 +68,12 @@ const Dashboard = () => {
           setDashboardData(dashboardResponse.data.data);
         } else {
           console.error("Failed to fetch dashboard stats");
+          setError("No dashboard data available for selected company");
         }
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        setError("No dashboard data available for selected company");
       } finally {
         setLoading(false);
       }
@@ -77,7 +81,17 @@ const Dashboard = () => {
 
     const timer = setTimeout(fetchDashboardData, 100);
     return () => clearTimeout(timer);
-  }, [location.state]);
+  }, [location.state, selectedCompany]); // Added getSelectedCompany() to dependency array
+
+    // Handle click on stat cards
+  const handleStatCardClick = () => {
+    navigate('/service-table');
+  };
+
+  // Handle click on error state
+  const handleErrorStateClick = () => {
+    navigate('/service-table');
+  };
 
   if (loading) {
     return (
@@ -109,25 +123,41 @@ const Dashboard = () => {
 
         {dashboardData ? (
           <div className="stats-container">
-            <div className="stat-card assigned">
+            <div 
+              className="stat-card assigned clickable" 
+              onClick={handleStatCardClick}
+            >
               <h3>Total Assigned</h3>
               <p>{dashboardData.total_assigned}</p>
+              <div className="click-hint">Click to view details</div>
             </div>
-            <div className="stat-card completed">
+            <div 
+              className="stat-card completed clickable" 
+              onClick={handleStatCardClick}
+            >
               <h3>Completed</h3>
               <p>{dashboardData.completed}</p>
+              <div className="click-hint">Click to view details</div>
             </div>
-            <div className="stat-card pending">
+            <div 
+              className="stat-card pending clickable" 
+              onClick={handleStatCardClick}
+            >
               <h3>Pending</h3>
               <p>{dashboardData.pending}</p>
+              <div className="click-hint">Click to view details</div>
             </div>
           </div>
         ) : (
-          <div className="error-state">
-            <p>Failed to load dashboard data</p>
-            <button onClick={() => window.location.reload()} className="retry-button">
-              Retry
-            </button>
+          <div 
+            className="error-state clickable" 
+            onClick={handleErrorStateClick}
+          >
+            <p>{error || "No dashboard data available for selected company"}</p>
+            {!selectedCompany && (
+              <p className="text-muted">Please select a company from the navigation menu</p>
+            )}
+            <div className="click-hint">Click to go home</div>
           </div>
         )}
 
