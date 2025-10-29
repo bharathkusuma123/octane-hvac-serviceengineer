@@ -677,11 +677,11 @@ const ServiceDetails = () => {
                           className="service-details__form-control"
                         >
                           <option value="">Select Component</option>
-  {Array.isArray(componentsList) && componentsList.map(comp => (
-    <option key={comp.id} value={comp.id}>
-      {comp.component_id}
-    </option>
-  ))}
+   {Array.isArray(componentsList) && componentsList.map(comp => (
+                                <option key={comp.id || comp.component_id} value={comp.id || comp.component_id}>
+                                  {comp.component_id} - {comp.component_name}
+                                </option>
+                              ))}
 </Form.Select>
                       </Form.Group>
 
