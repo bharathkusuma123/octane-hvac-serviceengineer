@@ -6,7 +6,8 @@ import {
   FaCogs,
   FaEnvelope,
   FaBell,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaUserCircle as FaProfile
 } from "react-icons/fa";
 import "./Navbar.css";
 import logo from "../../../Logos/hvac-logo-new.jpg";
@@ -16,7 +17,7 @@ import { useCompany } from "../../CompanyContext"; // Import the context
 const screens = [
   { label: "Dashboard", name: "/dashboard", icon: <FaHome /> },
   { label: "Requests", name: "/service-table", icon: <FaEnvelope /> },
-    { label: "Profile", name: "/profile-details", icon: <FaCogs /> },
+    { label: "Profile", name: "/profile-details", icon: <FaProfile /> },
 
 ];
 

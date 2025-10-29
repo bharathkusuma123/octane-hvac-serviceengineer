@@ -36,6 +36,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         setError(null);
+        setDashboardData(null); // Reset dashboard data on each fetch
 
         // Fetch user details (if not already available)
         if (location.state && location.state.userData) {
@@ -69,11 +70,13 @@ const Dashboard = () => {
         } else {
           console.error("Failed to fetch dashboard stats");
           setError("No dashboard data available for selected company");
+          setDashboardData(null); // Explicitly clear on failure
         }
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setError("No dashboard data available for selected company");
+        setDashboardData(null); // Clear on error
       } finally {
         setLoading(false);
       }
@@ -111,7 +114,8 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <Navbar />
       <div className="dashboard-content">
-        {/* <h2>Service Engineer Dashboard</h2> */}
+        <h6>Service Engineer Dashboard</h6>
+        <h3 className='mt-3'>Hey, {userDetails.full_name}</h3>
 
         {/* {userDetails && (
           <div className="user-summary">

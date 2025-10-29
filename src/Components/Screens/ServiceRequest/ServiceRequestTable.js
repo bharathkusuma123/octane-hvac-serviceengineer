@@ -17,6 +17,7 @@ const ServiceTable = () => {
   const [declinedServices, setDeclinedServices] = useState([]);
   const { selectedCompany, updateCompany } = useCompany();
   const [resourceId, setResourceId] = useState(null);
+   const [resourceData, setResourceData] = useState(null);
   const userId = localStorage.getItem("userId");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
@@ -50,9 +51,11 @@ const ServiceTable = () => {
       const resourceData = resourceRes.data?.data || [];
 
       const currentResource = resourceData.find(res => res.user === userId);
+      setResourceData(currentResource);
       const extractedResourceId = currentResource?.resource_id;
 
       setResourceId(extractedResourceId);
+      console.log("✅ Fetched Resource ID:", extractedResourceId);
 
       if (!extractedResourceId) {
         setServices([]);
@@ -263,6 +266,8 @@ const ServiceTable = () => {
         service,
         userId,
         selectedCompany,
+        extractedResourceId: resourceId,
+        resourceData: resourceData
       },
     });
   };
