@@ -63,7 +63,7 @@
   position: fixed;
   top: 0;
   width: 100%;
-  height: 60px;
+height: 85px;
   background-color: #ffffff;
   display: flex;
   justify-content: space-between;
@@ -73,6 +73,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   z-index: 102;
   flex-wrap: nowrap;
+  
 }
 
 .logo-img {
@@ -82,6 +83,8 @@
   object-fit: contain;
   flex-shrink: 1;
   margin-left: 15px;
+   margin-top: 30px;
+
 }
 
 .top-icons {
@@ -90,6 +93,8 @@
   min-width: 60px;
   flex-shrink: 0;
   margin-right: 12px; /* Alternatively, use padding */
+   margin-top: 30px;
+
 }
 
 

@@ -118,7 +118,7 @@ const NavScreen = () => {
             className="form-select ms-3"
             value={selectedCompany} // Use from context
             onChange={handleCompanyChange}
-            style={{ minWidth: "150px" }}
+            style={{ minWidth: "150px" , marginTop: "30px"  }}
           >
             {userData.default_company && (
               <option value={userData.default_company}>
