@@ -16,12 +16,14 @@ export default function Login() {
   const [autoLogin, setAutoLogin] = useState(false);
   const [secureText, setSecureText] = useState(true);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // Added loading state
   const passwordRef = useRef();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true); // Start loading
 
     try {
       let fcmToken = '';
@@ -74,7 +76,9 @@ export default function Login() {
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Invalid mobile number or password");
+      setError(err.response?.data?.message || "Invalid mobile number or password");
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -98,6 +102,7 @@ export default function Login() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') passwordRef.current.focus();
               }}
+              disabled={loading} // Disable during loading
             />
           </div>
 
@@ -109,41 +114,73 @@ export default function Login() {
               value={password}
               ref={passwordRef}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading} // Disable during loading
             />
-            <span onClick={() => setSecureText(!secureText)} className="eyeIcon">
+            <span 
+              onClick={() => !loading && setSecureText(!secureText)} 
+              className="eyeIcon"
+              style={{ cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}
+            >
               {secureText ? <FiEye /> : <FiEyeOff />}
             </span>
           </div>
 
           <div className="checkboxContainer">
-             <label className="switchLabel">
+            <label className="switchLabel">
               {/* <input
                 type="checkbox"
                 checked={autoLogin}
-                onChange={(e) => setAutoLogin(e.target.checked)}
+                onChange={(e) => !loading && setAutoLogin(e.target.checked)}
+                disabled={loading}
               />
               <span className="label">Auto Login</span> */}
             </label>
-            <span className="forgot" onClick={() => navigate('/security')}>Forgot Password/Pin?</span>
+            <span 
+              className="forgot" 
+              onClick={() => !loading && navigate('/security')}
+              style={{ cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}
+            >
+              Forgot Password/Pin?
+            </span>
           </div>
 
           {error && <p className="errorText">{error}</p>}
 
-          <button type="submit" className="loginButton shadow">LOGIN</button>
-           {/* <button type="button" className="socialButton">
+          <button 
+            type="submit" 
+            className={`loginButton shadow ${loading ? 'loading' : ''}`}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                LOGGING IN...
+              </>
+            ) : (
+              'LOGIN'
+            )}
+          </button>
+          
+          {/* <button type="button" className="socialButton" disabled={loading}>
             <img src={googleicon} alt="Google Icon" className="socialIcon" />
             <span className="socialText">Login with Google ID</span>
           </button>
 
-          <button className="socialButton black">
+          <button className="socialButton black" disabled={loading}>
             <FaApple className="socialIcon" color="#fff" />
             <span className="socialText white">Login with Apple ID</span>
           </button> */}
-{/* 
-          <p className="orText">Or</p>
+          
+          {/* <p className="orText">Or</p>
           <p className="registerText">
-            Don’t have an account?{' '}
-            <span className="registerLink" onClick={() => navigate('/signup')}>Register</span>
+            Don't have an account?{' '}
+            <span 
+              className="registerLink" 
+              onClick={() => !loading && navigate('/signup')}
+              style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
+            >
+              Register
+            </span>
           </p> */}
 
           <img src={greenaire} alt="Green Aire" className="footerLogo" />
