@@ -67,6 +67,7 @@ const ServiceTable = () => {
         axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${selectedCompany}`),
         axios.get(`${baseURL}/assignment-history/?user_id=${userId}&company_id=${selectedCompany}`)
       ]);
+      console.log("✅ Fetched service-pools", servicesRes);
 
       const allServices = Array.isArray(servicesRes.data)
         ? servicesRes.data

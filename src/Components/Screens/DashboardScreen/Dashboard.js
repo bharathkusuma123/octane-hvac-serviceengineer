@@ -115,7 +115,8 @@ const Dashboard = () => {
       <Navbar />
       <div className="dashboard-content">
         <h6>Service Engineer Dashboard</h6>
-        <h3 className='mt-3'>Hey, {userDetails.full_name}</h3>
+        {/* <h3 className='mt-3'>Hey, {userDetails.full_name}</h3> */}
+          <h3 className='mt-3'>Hey, Engineer</h3>
 
         {/* {userDetails && (
           <div className="user-summary">

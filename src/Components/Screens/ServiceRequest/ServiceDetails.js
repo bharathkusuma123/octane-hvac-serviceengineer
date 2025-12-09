@@ -1,128 +1,3 @@
-// import React, { useState, useEffect } from 'react';
-// import { Button, Form } from 'react-bootstrap';
-// import { useLocation, useNavigate } from 'react-router-dom';
-// import Navbar from '../Navbar/Navbar';
-// import axios from 'axios';
-// import baseURL from '../../ApiUrl/Apiurl';
-// import Swal from 'sweetalert2';
-// const statusOptions = [
-//   'Under Process',
-//   'Waiting for Spares',
-//   'Waiting for Quote',
-//   'Waiting for Client Approval',
-//   'Closed',
-//   'Reopened',
-// ];
-
-// const ServiceDetails = () => {
-//   const location = useLocation();
-//   const navigate = useNavigate();
-//   const { service } = location.state || {};
-//   console.log("request id",service.request_id);
-//   const [status, setStatus] = useState(service?.status || '');
-//   const [updating, setUpdating] = useState(false);
-
-//   if (!service) {
-//     return (
-//       <>
-//         <Navbar />
-//         <div className="container mt-5">
-//           <div className="alert alert-danger">No service data found</div>
-//           <Button onClick={() => navigate(-1)}>Go Back</Button>
-//         </div>
-//       </>
-//     );
-//   }
-
-
-// const handleStatusChange = async (e) => {
-//   const newStatus = e.target.value;
-//   setStatus(newStatus);
-//   setUpdating(true);
-
-//   console.log("Selected new status:", newStatus);
-//   console.log("Sending PUT request to /service-pools/ to update status...");
-
-//   try {
-//     const requestId = service.request_id;
-
-//     if (!requestId) {
-//       alert("Missing service request ID");
-//       setUpdating(false);
-//       return;
-//     }
-
-//     await axios.put(`${baseURL}/service-pools/${requestId}/`, {
-//       ...service, 
-//       status: newStatus, 
-//     });
-
-//     // console.log("✅ Status updated successfully in service-pools!");
-//     alert("Status updated successfully!");
-//   } catch (err) {
-//     console.error("Error updating status in service-pools:", err);
-//     alert(
-//       "Failed to update status. Error: " +
-//         (err.response?.data?.message || err.message)
-//     );
-//   } finally {
-//     setUpdating(false);
-//   }
-// };
-
-
-
-//   return (
-//     <>
-//       <Navbar />
-//       <div className="container mt-4">
-//         <div className="card shadow-sm">
-//           <div className="card-body">
-//             <h5 className="card-title">
-//               Service ID: {service.request_id || service.id}
-//             </h5>
-
-//             <div className="mt-4">
-//               <h6>Details:</h6>
-//               <div className="row mt-3">
-//                 <div className="col-md-6">
-//                   <p><strong>Request Details:</strong> {service.request_details || 'N/A'}</p>
-//                   <p><strong>Estimated Completion:</strong> {service.estimated_completion_time || 'N/A'}</p>
-//                   <p><strong>Start Date & Time:</strong> {service.est_start_datetime || 'N/A'}</p>
-//                   <p><strong>End Date & Time:</strong> {service.est_end_datetime || 'N/A'}</p>
-//                 </div>
-//               </div>
-//             </div>
-
-//             <div className="mt-4">
-//               <Form.Group>
-//                 <Form.Label><strong>Status</strong></Form.Label>
-//                 <Form.Select value={status} onChange={handleStatusChange} disabled={updating}>
-//                   <option value="">-- Select Status --</option>
-//                   {statusOptions.map((opt) => (
-//                     <option key={opt} value={opt}>{opt}</option>
-//                   ))}
-//                 </Form.Select>
-//               </Form.Group>
-//             </div>
-
-//             <div className="mt-4 text-end">
-//               <Button variant="primary" onClick={() => navigate(-1)} disabled={updating}>
-//                 Back to Services
-//               </Button>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </>
-//   );
-// };
-
-// export default ServiceDetails;
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Row, Col, Card, Alert, Tabs, Tab } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -155,7 +30,10 @@ const ServiceDetails = () => {
   const navigate = useNavigate();
   const { service, userId, selectedCompany, extractedResourceId, resourceData } = location.state || {};
   console.log("resourceData in service details:", resourceData);
+  console.log("service",service);
   const [activeTab, setActiveTab] = useState('details');
+  const [problemTypes, setProblemTypes] = useState([]);
+
   
   const [status, setStatus] = useState(service?.status || '');
   const [updating, setUpdating] = useState(false);
@@ -202,6 +80,32 @@ const ServiceDetails = () => {
 
     fetchDropdownData();
   }, []);
+
+  useEffect(() => {
+  axios
+    .get(`${baseURL}/problem-types/`)
+    .then((res) => {
+      const types =
+        Array.isArray(res.data) 
+          ? res.data 
+          : Array.isArray(res.data.data) 
+            ? res.data.data 
+            : [];
+
+      setProblemTypes(types);
+    })
+    .catch((err) => console.log("Error loading problem types", err));
+}, []);
+
+const getProblemTypeName = (id) => {
+  if (!id || !Array.isArray(problemTypes)) return "N/A";
+
+  const match = problemTypes.find(
+    (p) => p.problem_type_id === id
+  );
+
+  return match ? match.name : "N/A";
+};
 
   // Calculate labour hours and cost when dates change
   useEffect(() => {
@@ -494,6 +398,11 @@ const ServiceDetails = () => {
                 <Row className="service-details__info-grid">
                   <Col xs={12} md={6} className="service-details__info-col">
                     <div className="service-details__info-item">
+                      <label>Request/Problem Type:</label>
+                     <span>{getProblemTypeName(service.problem_type)}</span>
+
+                    </div>
+                    <div className="service-details__info-item">
                       <label>Request Details:</label>
                       <span>{service.request_details || 'N/A'}</span>
                     </div>
@@ -515,6 +424,35 @@ const ServiceDetails = () => {
                       <label>End Date & Time:</label>
                       <span>{formatDateTime(service.est_end_datetime)}</span>
                     </div>
+                  <div className="service-details__info-item-link">
+  <label>Customer:</label>
+
+  <span
+    className="link-text"
+    onClick={() =>
+      navigate(`/serviceengineer/customer/${service.customer}`, {
+        state: { userId, selectedCompany }
+      })
+    }
+  >
+    {service.customer || "N/A"}
+  </span>
+</div>
+
+
+      <div className="service-details__info-item-link">
+        <label>Service Item:</label>
+        <span
+          className="link-text"
+          onClick={() =>
+      navigate(`/serviceengineer/service-item/${service.service_item}`, {
+        state: { userId, selectedCompany }
+      })
+          }
+        >
+          {service.service_item || "N/A"}
+        </span>
+      </div>
                   </Col>
                 </Row>
               </div>
@@ -642,7 +580,7 @@ const ServiceDetails = () => {
             </div>
           </Tab>
 
-          <Tab eventKey="items" title="Add Service Items" className="service-details__tab">
+          <Tab eventKey="items" title="Replaced Service Item Components" className="service-details__tab">
             <div className="service-details__items-content">
               <div className="service-details__items-header">
                 <h4 className="service-details__section-title">Service Items History</h4>
