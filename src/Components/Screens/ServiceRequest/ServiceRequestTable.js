@@ -458,7 +458,7 @@ import axios from "axios";
 import baseURL from "../../ApiUrl/Apiurl"; 
 import { useCompany } from "../../CompanyContext";
 import Swal from "sweetalert2";
-
+import PdfReportButton from './PdfReportButton';
 const ServiceTable = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
@@ -1173,6 +1173,7 @@ const ServiceTable = () => {
                 <th className="py-3 px-3">Customer</th>
                 <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-3">Action</th>
+                  <th className="py-3 px-3">Reports</th>
               </tr>
             </thead>
             <tbody>
@@ -1248,6 +1249,17 @@ const ServiceTable = () => {
                         <span className="text-secondary fw-bold">Pending</span>
                       )}
                     </td>
+                      <td className="py-3 px-3">
+          {/* PDF Report Button */}
+          <PdfReportButton
+            service={service}
+            getCustomerName={getCustomerName}
+            getResourceName={getResourceName}
+            formatDate={formatDate}
+            formatDateTime={formatDateTime}
+            
+          />
+        </td>
                   </tr>
                 ))
               )}

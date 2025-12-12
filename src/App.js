@@ -37,7 +37,7 @@ import SignupSetPassword from './Components/Login/SignupSetPassword'
 import { CompanyProvider } from '../src/Components/CompanyContext';
 import CustomerDetailsPage from "./Components/Screens/ServiceRequest/CustomerDetailsPage";
 import ServiceItemDetailsPage from "./Components/Screens/ServiceRequest/ServiceItemDetailsPage";
-
+import PdfReportButton from "./Components/Screens/ServiceRequest/PdfReportButton";
 
 // 🔹 Wrapper component to handle auto-login check
 function AppWrapper() {
@@ -82,6 +82,9 @@ function App() {
             <Route path="/request" element={<RequestScreen />} />
             <Route path="/feedback" element={<FeedbackScreen />} />
             <Route path="/service-table" element={<ServiceRequestTable />} />
+                        <Route path="/service-table" element={<PdfReportButton />} />
+
+
             <Route path="/reject" element={<RejectForm />} />
             <Route path="/service-details" element={<ServiceDetails />} />
             <Route path="/signup" element={<SignUpScreen />} />
