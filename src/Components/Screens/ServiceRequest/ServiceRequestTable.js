@@ -477,6 +477,7 @@ const ServiceTable = () => {
   const [itemsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+const [problemTypesData, setProblemTypesData] = useState([]);
 
   // Status options based on your first image
   const statusFilters = [
@@ -488,6 +489,99 @@ const ServiceTable = () => {
     "Closed",
     "Reopened"
   ];
+  // Add this fetch function
+const fetchProblemTypes = async () => {
+  try {
+    const response = await axios.get(`${baseURL}/problem-types/`);
+    const data = response.data;
+    const types = Array.isArray(data) 
+      ? data 
+      : Array.isArray(data.data) 
+        ? data.data 
+        : [];
+    setProblemTypesData(types);
+  } catch (error) {
+    console.error("Failed to load problem types", error);
+  }
+};
+
+
+// Add this helper function to get complete service item details
+const getServiceItemDetails = (serviceItemId) => {
+  if (!serviceItemId || serviceItemsData.length === 0) {
+    return {
+      service_item_id: serviceItemId || 'N/A',
+      service_item_address: 'N/A',
+      warranty_start_date: 'N/A',
+      warranty_end_date: 'N/A',
+      under_warranty: 'No',
+      pm_details: 'N/A',
+      service_request_count: 0
+    };
+  }
+  
+  const serviceItem = serviceItemsData.find(item => item.service_item_id === serviceItemId);
+  
+  if (!serviceItem) {
+    return {
+      service_item_id: serviceItemId,
+      service_item_address: 'N/A',
+      warranty_start_date: 'N/A',
+      warranty_end_date: 'N/A',
+      under_warranty: 'No',
+      pm_details: 'N/A',
+      service_request_count: 0
+    };
+  }
+  
+  // Check if under warranty
+  const today = new Date();
+  const warrantyEnd = new Date(serviceItem.warranty_end_date);
+  const underWarranty = warrantyEnd > today ? 'Yes' : 'No';
+  
+  // Get address from location fields
+  const addressParts = [
+    serviceItem.location,
+    serviceItem.city,
+    serviceItem.state,
+    serviceItem.country,
+    serviceItem.zip_code
+  ].filter(part => part && part.trim() !== '');
+  
+  const address = addressParts.join(', ') || 'N/A';
+  
+  return {
+    service_item_id: serviceItem.service_item_id || serviceItemId,
+    service_item_name: serviceItem.service_item_name || 'N/A',
+    serial_number: serviceItem.serial_number || 'N/A',
+    service_item_address: address,
+    warranty_start_date: serviceItem.warranty_start_date ? formatDate(serviceItem.warranty_start_date) : 'N/A',
+    warranty_end_date: serviceItem.warranty_end_date ? formatDate(serviceItem.warranty_end_date) : 'N/A',
+    under_warranty: underWarranty,
+    pm_details: serviceItem.pm_group || 'N/A',
+    service_request_count: getServiceRequestCount(serviceItemId),
+    // Additional details that might be useful
+    installation_date: serviceItem.installation_date ? formatDate(serviceItem.installation_date) : 'N/A',
+    product_description: serviceItem.product_description || 'N/A',
+    status: serviceItem.status || 'N/A',
+    iot_status: serviceItem.iot_status || 'N/A'
+  };
+};
+
+// Add function to count service requests for this service item
+const getServiceRequestCount = (serviceItemId) => {
+  if (!serviceItemId) return 0;
+  return services.filter(service => 
+    service.service_item === serviceItemId
+  ).length;
+};
+
+
+
+
+
+
+
 
   // Fetch users data
   const fetchUsers = async () => {
@@ -593,11 +687,35 @@ const ServiceTable = () => {
 
   // Function to get customer name by customer ID
   const getCustomerName = (customerId) => {
+    console.log(customerId)
     if (!customerId || customersData.length === 0) return customerId;
+
     
     const customer = customersData.find(cust => cust.customer_id === customerId);
     return customer ? `${customer.full_name} (${customer.username})` : customerId;
   };
+
+
+  // In your parent component
+// First, make sure you have a function to get customer details
+const getCustomerDetails = (customerId) => {
+  if (!customerId) return null;
+  
+  // Find customer in your customersData array
+  const customer = customersData.find(cust => cust.customer_id === customerId);
+  
+  if (!customer) return null;
+  
+  return {
+    name: getCustomerName(customerId), // Use your existing function
+    address: customer.address || 'N/A',
+    contactPerson: customer.full_name || customer.username || 'N/A',
+    phone: customer.mobile ? `${customer.country_code || ''} ${customer.mobile}`.trim() : 'N/A',
+    email: customer.email || 'N/A',
+    customerId: customer.customer_id,
+    // You can add more fields if needed
+  };
+};
 
   // Function to get customer search data
   const getCustomerSearchData = (customerId) => {
@@ -607,12 +725,140 @@ const ServiceTable = () => {
   };
 
   // Function to get resource name by resource ID
-  const getResourceName = (resourceId) => {
-    if (!resourceId || resourcesData.length === 0) return resourceId;
+  // const getResourceName = (resourceId) => {
+  //   if (!resourceId || resourcesData.length === 0) return resourceId;
     
-    const resource = resourcesData.find(res => res.resource_id === resourceId);
-    return resource ? `${resource.first_name} ${resource.last_name}` : resourceId;
-  };
+  //   const resource = resourcesData.find(res => res.resource_id === resourceId);
+  //   return resource ? `${resource.first_name} ${resource.last_name}` : resourceId;
+  // };
+
+  // Function to get resource name by resource ID
+const getResourceName = (resourceId) => {
+  if (!resourceId) return "Not Assigned";
+  
+  // Log for debugging
+  console.log("Looking for resource ID:", resourceId, "Type:", typeof resourceId);
+  console.log("Available resources:", resourcesData);
+  
+  // Try to find in resourcesData
+  if (resourcesData && resourcesData.length > 0) {
+    const resource = resourcesData.find(res => {
+      // Check multiple possible ID fields
+      return res.resource_id === resourceId || 
+             res.id === resourceId || 
+             String(res.resource_id) === String(resourceId) ||
+             String(res.id) === String(resourceId);
+    });
+    
+    if (resource) {
+      const firstName = resource.first_name || '';
+      const lastName = resource.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      console.log("Found resource:", resource, "Name:", fullName);
+      return fullName || resource.email || resource.username || String(resourceId);
+    }
+  }
+  
+  // Fallback to resourceData if available
+  if (resourceData && 
+      (resourceData.resource_id === resourceId || 
+       String(resourceData.resource_id) === String(resourceId))) {
+    const fullName = `${resourceData.first_name || ''} ${resourceData.last_name || ''}`.trim();
+    return fullName || String(resourceId);
+  }
+  
+  console.log("Resource not found for ID:", resourceId);
+  return String(resourceId); // Return the ID as string if not found
+};
+
+// Function to get complete engineer details by ID
+// const getEngineerDetails = (engineerId) => {
+//   if (!engineerId) return null;
+  
+//   // Try to find in resourcesData
+//   if (resourcesData && resourcesData.length > 0) {
+//     const engineer = resourcesData.find(res => {
+//       return res.resource_id === engineerId || 
+//              res.id === engineerId ||
+//              String(res.resource_id) === String(engineerId);
+//     });
+    
+//     if (engineer) {
+//       return {
+//         id: engineer.resource_id || engineer.id,
+//         firstName: engineer.first_name || '',
+//         lastName: engineer.last_name || '',
+//         fullName: `${engineer.first_name || ''} ${engineer.last_name || ''}`.trim(),
+//         email: engineer.email || '',
+//         phone: engineer.phone || engineer.mobile || '',
+//         designation: engineer.designation || '',
+//         department: engineer.department || ''
+//       };
+//     }
+//   }
+  
+//   // Check if it's the current user's resource
+//   if (resourceData && 
+//       (resourceData.resource_id === engineerId || 
+//        String(resourceData.resource_id) === String(engineerId))) {
+//     return {
+//       id: resourceData.resource_id,
+//       firstName: resourceData.first_name || '',
+//       lastName: resourceData.last_name || '',
+//       fullName: `${resourceData.first_name || ''} ${resourceData.last_name || ''}`.trim(),
+//       email: resourceData.email || '',
+//       phone: resourceData.phone || resourceData.mobile || '',
+//       designation: resourceData.designation || '',
+//       department: resourceData.department || ''
+//     };
+//   }
+  
+//   return null;
+// };
+
+const getEngineerDetails = (engineerId) => {
+  if (!engineerId) return null;
+  
+  const engineerIdStr = String(engineerId);
+  console.log("🔍 Looking for engineer ID:", engineerIdStr);
+  
+  // Find engineer in resourcesData
+  if (resourcesData && resourcesData.length > 0) {
+    const engineer = resourcesData.find(res => {
+      const resId = res.resource_id ? String(res.resource_id) : '';
+      const resId2 = res.id ? String(res.id) : '';
+      
+      return resId === engineerIdStr || resId2 === engineerIdStr;
+    });
+    
+    if (engineer) {
+      console.log("✅ Found engineer data:", {
+        id: engineer.resource_id,
+        first_name: engineer.first_name,
+        last_name: engineer.last_name,
+        email: engineer.email
+      });
+      
+      // PRIORITIZE FULL NAME over email
+      const firstName = engineer.first_name || '';
+      const lastName = engineer.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      
+      return {
+        id: engineer.resource_id || engineer.id || engineerId,
+        firstName: firstName,
+        lastName: lastName,
+        fullName: fullName || engineer.email || engineer.username || 'Technician',
+        email: engineer.email || '',
+        phone: engineer.phone || engineer.mobile || '',
+        designation: engineer.designation || '',
+        department: engineer.department || ''
+      };
+    }
+  }
+  
+  return null;
+};
 
   // Function to get resource search data
   const getResourceSearchData = (resourceId) => {
@@ -707,6 +953,21 @@ const ServiceTable = () => {
     ].join(' ');
   };
 
+  // Add this function with other helper functions
+const getProblemTypeName = (problemTypeId) => {
+  if (!problemTypeId || problemTypesData.length === 0) return "N/A";
+  
+  const problemType = problemTypesData.find(pt => pt.problem_type_id === problemTypeId);
+  return problemType ? problemType.name : "N/A";
+};
+
+// Also add this for search functionality
+const getProblemTypeSearchData = (problemTypeId) => {
+  if (!problemTypeId) return '';
+  const problemType = problemTypesData.find(pt => pt.problem_type_id === problemTypeId);
+  return problemType ? `${problemTypeId} ${problemType.name}` : problemTypeId;
+};
+
   const fetchData = async () => {
     try {
       console.log("🔹 Selected Company:", selectedCompany);
@@ -724,7 +985,8 @@ const ServiceTable = () => {
         fetchResources(),
         fetchCompanies(),
         fetchProducts(),
-        fetchServiceItems()
+        fetchServiceItems(),
+         fetchProblemTypes() 
       ]);
 
       // ✅ Fetch resource by company_id and user_id
@@ -1251,14 +1513,55 @@ const ServiceTable = () => {
                     </td>
                       <td className="py-3 px-3">
           {/* PDF Report Button */}
-          <PdfReportButton
-            service={service}
-            getCustomerName={getCustomerName}
-            getResourceName={getResourceName}
-            formatDate={formatDate}
-            formatDateTime={formatDateTime}
-            
-          />
+       {/* <PdfReportButton
+  service={service}
+  getCustomerName={getCustomerName}
+  getResourceName={getResourceName}
+  formatDate={formatDate}
+  formatDateTime={formatDateTime}
+  getProblemTypeName={getProblemTypeName}
+  getServiceItemDetails={getServiceItemDetails}
+  
+  // Service details
+  serviceDate={service.preferred_date}
+  serviceTime={service.preferred_time}
+  problemType={getProblemTypeName(service.problem_type)}
+  reportedIssue={service.request_details || "No issue reported"}
+  serviceItemInfo={service.service_item ? getServiceItemDetails(service.service_item) : null}
+  
+  // Customer info - use the function to get customer details
+  customerInfo={getCustomerDetails(service.customer_id)}
+/> */}
+
+<PdfReportButton
+  service={service}
+  getCustomerName={getCustomerName}
+  getResourceName={getResourceName}
+    getEngineerDetails={getEngineerDetails} 
+  formatDate={formatDate}
+  formatDateTime={formatDateTime}
+  getProblemTypeName={getProblemTypeName}
+  getServiceItemDetails={getServiceItemDetails}
+  
+  // Service details
+  serviceDate={service.preferred_date}
+  serviceTime={service.preferred_time}
+  problemType={getProblemTypeName(service.problem_type)}
+  reportedIssue={service.request_details || "No issue reported"}
+  serviceItemInfo={service.service_item ? getServiceItemDetails(service.service_item) : null}
+  
+  // Pass customersData directly
+  customersData={customersData}
+
+   // Pass resourcesData for direct matching
+  resourcesData={resourcesData}
+  
+  // Pass resourceData for fallback
+  resourceData={resourceData}
+  
+  // Optional: you can still pass customerInfo if you want
+  customerInfo={getCustomerDetails(service.customer)}
+/>
         </td>
                   </tr>
                 ))
