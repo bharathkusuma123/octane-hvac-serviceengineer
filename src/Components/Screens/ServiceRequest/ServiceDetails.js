@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button, Form, Row, Col, Card, Alert, Tabs, Tab } from 'react-bootstrap';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar/Navbar';
@@ -7,7 +7,7 @@ import baseURL from '../../ApiUrl/Apiurl';
 import Swal from 'sweetalert2';
 import './ServiceDetails.css'; // Import CSS file
 
-const taskTypeOptions = [
+const taskTypeOptions = [ 
   'Replace',
   'Clean',
   'Top-up',
@@ -26,6 +26,7 @@ const statusOptions = [
 ];
 
 const ServiceDetails = () => {
+  const completionRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { service, userId, selectedCompany, extractedResourceId, resourceData } = location.state || {};
@@ -34,6 +35,31 @@ const ServiceDetails = () => {
   const [activeTab, setActiveTab] = useState('details');
   const [problemTypes, setProblemTypes] = useState([]);
 
+  const [customers, setCustomers] = useState([]);
+
+useEffect(() => {
+  axios
+    .get(`${baseURL}/customers/?user_id=${userId}&company_id=${selectedCompany}`)
+    .then((res) => {
+      setCustomers(res.data.data);
+    });
+}, [userId, selectedCompany]);
+
+const customerName =
+  customers.find((c) => c.customer_id === service.customer)?.full_name;
+
+  const [serviceItems, setServiceItems] = useState([]);
+
+useEffect(() => {
+  axios
+    .get(`${baseURL}/service-items/?user_id=${userId}&company_id=${selectedCompany}`)
+    .then((res) => {
+      setServiceItems(res.data.data);
+    });
+}, [userId, selectedCompany]);
+
+const serviceItemName =
+  serviceItems.find((s) => s.service_item_id === service.service_item)?.service_item_name;
   
   const [status, setStatus] = useState(service?.status || '');
   const [updating, setUpdating] = useState(false);
@@ -52,6 +78,17 @@ const ServiceDetails = () => {
   const [componentsList, setComponentsList] = useState([]);
   const [pmSchedulesList, setPmSchedulesList] = useState([]);
   
+    useEffect(() => {
+  if (status === "Closed" && completionRef.current) {
+    setTimeout(() => {
+      completionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 200);
+  }
+}, [status]);
+
   // New state for completion form fields
   const [completionData, setCompletionData] = useState({
     act_start_datetime: '',
@@ -161,15 +198,32 @@ const getProblemTypeName = (id) => {
     );
   }
 
-  const handleStatusChange = async (e) => {
-    const newStatus = e.target.value;
-    setStatus(newStatus);
+ const handleStatusChange = async (e) => {
+  const newStatus = e.target.value;
 
-    // If status is being set to Closed, we'll update when form is submitted
-    if (newStatus !== 'Closed') {
-      await updateServiceStatus(newStatus);
-    }
-  };
+  if (!newStatus) return;
+
+  // If status is Closed → no confirmation, just open form
+  if (newStatus === "Closed") {
+    setStatus(newStatus);
+    return;
+  }
+
+  // For other statuses → ask confirmation
+  const result = await Swal.fire({
+    title: "Are you sure?",
+    text: `Do you want to change the status to "${newStatus}"?`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, Update",
+    cancelButtonText: "Cancel",
+  });
+
+  if (!result.isConfirmed) return;
+
+  setStatus(newStatus);
+  await updateServiceStatus(newStatus);
+};
 
   const updateServiceStatus = async (statusToUpdate, completionDataToUpdate = null) => {
     setUpdating(true);
@@ -435,7 +489,7 @@ const getProblemTypeName = (id) => {
       })
     }
   >
-    {service.customer || "N/A"}
+    {customerName || "N/A"}
   </span>
 </div>
 
@@ -450,7 +504,7 @@ const getProblemTypeName = (id) => {
       })
           }
         >
-          {service.service_item || "N/A"}
+          {serviceItemName || "N/A"}
         </span>
       </div>
                   </Col>
@@ -476,7 +530,9 @@ const getProblemTypeName = (id) => {
 
                 {/* Completion Form - Only shown when status is Closed */}
                 {status === 'Closed' && (
-                  <div className="service-details__completion-form mt-4">
+                  <div 
+                   ref={completionRef}
+                   className="service-details__completion-form mt-4">
                     <h5 className="service-details__completion-title">Service Completion Details</h5>
                     <Row className="service-details__completion-grid">
                       <Col xs={12} md={6} className="service-details__completion-col">

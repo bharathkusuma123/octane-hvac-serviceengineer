@@ -38,6 +38,9 @@ import { CompanyProvider } from '../src/Components/CompanyContext';
 import CustomerDetailsPage from "./Components/Screens/ServiceRequest/CustomerDetailsPage";
 import ServiceItemDetailsPage from "./Components/Screens/ServiceRequest/ServiceItemDetailsPage";
 import PdfReportButton from "./Components/Screens/ServiceRequest/PdfReportButton";
+import Signup from "./Components/Login/Signup";
+import ForgotPassword from "./Components/Login/ForgotPassword";
+import AdminResetPasswordScreen from "./Components/Login/ResetPassword";
 
 // 🔹 Wrapper component to handle auto-login check
 function AppWrapper() {
@@ -87,8 +90,11 @@ function App() {
 
             <Route path="/reject" element={<RejectForm />} />
             <Route path="/service-details" element={<ServiceDetails />} />
-            <Route path="/signup" element={<SignUpScreen />} />
-            <Route path="/signupset-password-screen" element={<SignupSetPassword />} />
+            {/* <Route path="/signup" element={<SignUpScreen />} />
+            <Route path="/signupset-password-screen" element={<SignupSetPassword />} /> */}
+              <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<AdminResetPasswordScreen />} />
           </Routes>
         </div>
       </Router>

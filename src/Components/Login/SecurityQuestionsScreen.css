@@ -1,0 +1,90 @@
+.security-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f6f9fc;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.security-card {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+  position: relative;
+  text-align: center;
+}
+
+.security-back-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #333;
+}
+
+.security-logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.security-logo {
+  width: 120px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.security-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.security-label {
+  font-weight: 600;
+  text-align: left;
+  display: block;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.security-select {
+  background-color: #e8edf1;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  width: 100%;
+  font-size: 16px;
+  outline: none;
+}
+
+.security-input {
+  background-color: #e8edf1;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  width: 100%;
+  font-size: 16px;
+  outline: none;
+}
+
+.security-submit-button {
+  width: 100%;
+  background-color: #0096d6;
+  padding: 15px;
+  border-radius: 12px;
+  border: none;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+}

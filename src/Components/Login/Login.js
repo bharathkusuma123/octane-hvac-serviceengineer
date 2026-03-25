@@ -137,10 +137,10 @@ export default function Login() {
             </label>
             <span 
               className="forgot" 
-              onClick={() => !loading && navigate('/security')}
+              onClick={() => !loading && navigate('/forgot-password')}
               style={{ cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}
             >
-              Forgot Password/Pin?
+              Forgot Password? 
             </span>
           </div>
 
@@ -182,6 +182,20 @@ export default function Login() {
               Register
             </span>
           </p> */}
+
+           <p className="registerText text-center mt-3">
+
+                    First time login?{" "}
+
+                    <span
+                      className="registerLink"
+                      style={{ cursor: "pointer", color: "#0096D6" }}
+                      onClick={() => navigate("/signup")}
+                    >
+                      Set your security questions
+                    </span>
+
+                  </p>
 
           <img src={greenaire} alt="Green Aire" className="footerLogo" />
         </form>
