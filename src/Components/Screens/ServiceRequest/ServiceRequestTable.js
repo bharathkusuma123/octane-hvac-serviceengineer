@@ -771,50 +771,6 @@ const getResourceName = (resourceId) => {
   return String(resourceId); // Return the ID as string if not found
 };
 
-// Function to get complete engineer details by ID
-// const getEngineerDetails = (engineerId) => {
-//   if (!engineerId) return null;
-  
-//   // Try to find in resourcesData
-//   if (resourcesData && resourcesData.length > 0) {
-//     const engineer = resourcesData.find(res => {
-//       return res.resource_id === engineerId || 
-//              res.id === engineerId ||
-//              String(res.resource_id) === String(engineerId);
-//     });
-    
-//     if (engineer) {
-//       return {
-//         id: engineer.resource_id || engineer.id,
-//         firstName: engineer.first_name || '',
-//         lastName: engineer.last_name || '',
-//         fullName: `${engineer.first_name || ''} ${engineer.last_name || ''}`.trim(),
-//         email: engineer.email || '',
-//         phone: engineer.phone || engineer.mobile || '',
-//         designation: engineer.designation || '',
-//         department: engineer.department || ''
-//       };
-//     }
-//   }
-  
-//   // Check if it's the current user's resource
-//   if (resourceData && 
-//       (resourceData.resource_id === engineerId || 
-//        String(resourceData.resource_id) === String(engineerId))) {
-//     return {
-//       id: resourceData.resource_id,
-//       firstName: resourceData.first_name || '',
-//       lastName: resourceData.last_name || '',
-//       fullName: `${resourceData.first_name || ''} ${resourceData.last_name || ''}`.trim(),
-//       email: resourceData.email || '',
-//       phone: resourceData.phone || resourceData.mobile || '',
-//       designation: resourceData.designation || '',
-//       department: resourceData.department || ''
-//     };
-//   }
-  
-//   return null;
-// };
 
 const getEngineerDetails = (engineerId) => {
   if (!engineerId) return null;
@@ -968,114 +924,111 @@ const getProblemTypeSearchData = (problemTypeId) => {
   return problemType ? `${problemTypeId} ${problemType.name}` : problemTypeId;
 };
 
-  const fetchData = async () => {
-    try {
-      console.log("🔹 Selected Company:", selectedCompany);
-      console.log("🔹 User ID:", userId);
+ const fetchData = async () => {
+  try {
+    console.log("🔹 Selected Company:", selectedCompany);
+    console.log("🔹 User ID:", userId);
 
-      if (!selectedCompany || !userId) {
-        console.warn("selectedCompany or userId not ready yet");
-        return;
-      }
+    if (!selectedCompany || !userId) {
+      console.warn("selectedCompany or userId not ready yet");
+      return;
+    }
 
-      // Fetch all relational data first
-      await Promise.all([
-        fetchUsers(),
-        fetchCustomers(),
-        fetchResources(),
-        fetchCompanies(),
-        fetchProducts(),
-        fetchServiceItems(),
-         fetchProblemTypes() 
-      ]);
+    await Promise.all([
+      fetchUsers(),
+      fetchCustomers(),
+      fetchResources(),
+      fetchCompanies(),
+      fetchProducts(),
+      fetchServiceItems(),
+      fetchProblemTypes()
+    ]);
 
-      // ✅ Fetch resource by company_id and user_id
-      const resourceUrl = `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`;
-      const resourceRes = await axios.get(resourceUrl);
-      const resourceData = resourceRes.data?.data || [];
+    const resourceUrl = `${baseURL}/resources/?company_id=${selectedCompany}&user_id=${userId}`;
+    const resourceRes = await axios.get(resourceUrl);
+    const resourceData = resourceRes.data?.data || [];
 
-      const currentResource = resourceData.find(res => res.user === userId);
-      setResourceData(currentResource);
-      const extractedResourceId = currentResource?.resource_id;
+    const currentResource = resourceData.find(res => res.user === userId);
+    setResourceData(currentResource);
+    const extractedResourceId = currentResource?.resource_id;
+    setResourceId(extractedResourceId);
 
-      setResourceId(extractedResourceId);
-      console.log("✅ Fetched Resource ID:", extractedResourceId);
+    if (!extractedResourceId) {
+      setServices([]);
+      return;
+    }
 
-      if (!extractedResourceId) {
-        setServices([]);
-        return;
-      }
+    const [servicesRes, assignmentsRes] = await Promise.all([
+      axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${selectedCompany}`),
+      axios.get(`${baseURL}/assignment-history/?user_id=${userId}&company_id=${selectedCompany}`)
+    ]);
 
-      // ✅ Fetch service-pools and assignment-history in parallel
-      const [servicesRes, assignmentsRes] = await Promise.all([
-        axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${selectedCompany}`),
-        axios.get(`${baseURL}/assignment-history/?user_id=${userId}&company_id=${selectedCompany}`)
-      ]);
-      console.log("✅ Fetched service-pools", servicesRes);
+    const allServices = Array.isArray(servicesRes.data)
+      ? servicesRes.data
+      : servicesRes.data.data || [];
 
-      const allServices = Array.isArray(servicesRes.data)
-        ? servicesRes.data
-        : servicesRes.data.data || [];
+    let assignments = Array.isArray(assignmentsRes.data)
+      ? assignmentsRes.data
+      : assignmentsRes.data.data || [];
 
-      let assignments = Array.isArray(assignmentsRes.data)
-        ? assignmentsRes.data
-        : assignmentsRes.data.data || [];
+    // Sort latest first
+    assignments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-      // 🔽 Sort assignments by latest date
-      assignments.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
-
-      // ✅ Latest assignment per (request_id, assigned_engineer)
-      const userAssignmentMap = {};
-      assignments.forEach(item => {
-        const key = `${item.request}_${item.assigned_engineer}`;
-        if (!userAssignmentMap[key]) {
-          userAssignmentMap[key] = item;
-        }
-      });
-
-      const assignedToUser = allServices
-        .filter(service =>
-          service.assigned_engineer === extractedResourceId ||
-          Object.values(userAssignmentMap).some(
-            assignment =>
-              assignment.request === service.request_id &&
-              assignment.assigned_engineer === extractedResourceId
-          )
-        )
-        .map(service => {
-          const userAssignment = Object.values(userAssignmentMap).find(
-            assignment =>
-              assignment.request === service.request_id &&
-              assignment.assigned_engineer === extractedResourceId
+    const assignedToUser = allServices
+      .filter(service => {
+        // Include if this engineer ever had an assignment for this request
+        return assignments.some(
+          a => a.request === service.request_id &&
+               a.assigned_engineer === extractedResourceId
+        );
+      })
+      .map(service => {
+        // Get ALL assignments for this engineer on this request (sorted latest first)
+        const engineerAssignments = assignments
+          .filter(
+            a => a.request === service.request_id &&
+                 a.assigned_engineer === extractedResourceId
           );
 
-          return {
-            ...service,
-            assignment_id: userAssignment?.assignment_id || null,
-            assignment_status: userAssignment?.status || service.status || "Pending",
-            assigned_engineer: userAssignment?.assigned_engineer || service.assigned_engineer,
-            is_current_user_assignment:
-              userAssignment?.assigned_engineer === extractedResourceId,
-            // Add assignment created_at for sorting
-            assignment_created_at: userAssignment?.created_at || service.created_at
-          };
-        });
+        const latestAssignment = engineerAssignments[0]; // already sorted latest first
 
-      // 🔽 SORT SERVICES BY LATEST DATE (Most recent first)
-      assignedToUser.sort((a, b) => {
-        const dateA = new Date(a.assignment_created_at || a.created_at);
-        const dateB = new Date(b.assignment_created_at || b.created_at);
-        return dateB - dateA;
+        // Get the GLOBAL latest assignment for this request (any engineer)
+        const globalLatestAssignment = assignments
+          .filter(a => a.request === service.request_id)[0];
+
+        // is_recalled: engineer's latest assignment was Recalled
+        const is_recalled = latestAssignment?.status === "Recalled";
+
+        // is_reassigned: after recall, the request was reassigned to someone else
+        const is_reassigned =
+          is_recalled &&
+          globalLatestAssignment?.assigned_engineer !== extractedResourceId;
+
+        return {
+          ...service,
+          assignment_id: latestAssignment?.assignment_id || null,
+          // Use engineer's OWN assignment status, NOT the global service status
+          assignment_status: latestAssignment?.status || "Pending",
+          assigned_engineer: latestAssignment?.assigned_engineer || service.assigned_engineer,
+          is_recalled,
+          is_reassigned,
+          assignment_created_at: latestAssignment?.created_at || service.created_at
+        };
       });
 
-      console.log("✅ Assigned services count:", assignedToUser.length);
-      setServices(assignedToUser);
-    } catch (error) {
-      console.error("🔴 Error fetching data:", error.response?.data || error.message || error);
-    }
-  };
+    assignedToUser.sort((a, b) => {
+      const dateA = new Date(a.assignment_created_at || a.created_at);
+      const dateB = new Date(b.assignment_created_at || b.created_at);
+      return dateB - dateA;
+    });
+
+    console.log("✅ Assigned services:", assignedToUser);
+    setServices(assignedToUser);
+
+  } catch (error) {
+    console.error("🔴 Error fetching data:", error.response?.data || error.message || error);
+  }
+};
 
   useEffect(() => {
     if (selectedCompany && userId) {
@@ -1362,6 +1315,54 @@ const getProblemTypeSearchData = (problemTypeId) => {
   const currentItems = filteredServices.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
+  const handlePdfUpload = async (file, service) => {
+  try {
+    if (!file) return;
+
+    // Validate PDF
+    if (file.type !== "application/pdf") {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid File",
+        text: "Only PDF files are allowed",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("user_id", userId);
+    formData.append("company_id", selectedCompany);
+    formData.append("service_item_id", service.service_item);
+
+    // SAME KEY as your existing code
+    formData.append("file", file);
+
+    const url = `${baseURL}/service-pools/${service.request_id}/reports/`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.ok) {
+      Swal.fire({
+        icon: "success",
+        title: "Uploaded",
+        text: "PDF uploaded successfully!",
+      });
+    } else {
+      throw new Error("Upload failed");
+    }
+  } catch (error) {
+    console.error(error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to upload PDF",
+    });
+  }
+};
+
   return (
     <>
       <Navbar />
@@ -1435,7 +1436,8 @@ const getProblemTypeSearchData = (problemTypeId) => {
                 <th className="py-3 px-3">Customer</th>
                 <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-3">Action</th>
-                  <th className="py-3 px-3">Reports</th>
+                <th className="py-3 px-3">Reports</th>
+                <th className="py-3 px-3">Upload Report</th>
               </tr>
             </thead>
             <tbody>
@@ -1449,21 +1451,25 @@ const getProblemTypeSearchData = (problemTypeId) => {
                 </tr>
               ) : (
                 currentItems.map((service, index) => (
-                  <tr
-                    key={service.request_id || service.id}
-                    className="service-row"
-                  >
+                 <tr
+  key={service.request_id || service.id}
+  className={`service-row ${service.is_recalled ? 'table-secondary' : ''}`}
+  style={service.is_recalled ? { opacity: 0.5, pointerEvents: 'none' } : {}}
+>
                     <td className="py-3 px-3">
                       {indexOfFirstItem + index + 1}
                     </td>
-                    <td 
-                      className="py-3 px-3 text-primary"
-                      style={{cursor: 'pointer', textDecoration: 'underline'}}
-                      onClick={() => handleServiceIdClick(service, userId, selectedCompany)}
-                      title={`Click to view details. ID: ${service.request_id || service.id}`}
-                    >
-                      {service.request_id || service.id}
-                    </td>
+                    <td
+  className={`py-3 px-3 ${service.is_recalled ? 'text-muted' : 'text-primary'}`}
+  style={{
+    cursor: service.is_recalled ? 'not-allowed' : 'pointer',
+    textDecoration: service.is_recalled ? 'none' : 'underline'
+  }}
+  onClick={() => !service.is_recalled && handleServiceIdClick(service, userId, selectedCompany)}
+  title={service.is_recalled ? 'Access removed — assignment recalled' : `Click to view details. ID: ${service.request_id || service.id}`}
+>
+  {service.request_id || service.id}
+</td>
                     <td className="py-3 px-3" title={`Customer ID: ${service.customer}`}>
                       {getCustomerName(service.customer)}
                     </td>
@@ -1480,37 +1486,41 @@ const getProblemTypeSearchData = (problemTypeId) => {
                         {service.status || "N/A"}
                       </span>
                     </td>
-                    <td className="py-3 px-3">
-                      {service.status === "Under Process" ? (
-                        <span className="text-success fw-bold">Accepted</span>
-                      ) : service.assignment_status === "Declined" && service.assigned_engineer === resourceId ? (
-                        <span className="text-danger fw-bold">Rejected</span>
-                      ) : (["Pending", "Assigned"].includes(service.assignment_status) &&
-                          service.assigned_engineer === resourceId) ? (
-                        <div className="d-flex justify-content-center gap-2">
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() =>
-                              handleAcceptClick(service.request_id, service.assignment_id)
-                            }
-                            className="px-2"
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleRejectClick(service)}
-                            className="px-2"
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-secondary fw-bold">Pending</span>
-                      )}
-                    </td>
+                   <td className="py-3 px-3">
+  {service.is_recalled ? (
+    <span className="text-muted fw-bold">Recalled</span>
+
+  ) : service.assignment_status === "Accepted" ? (
+    <span className="text-success fw-bold">Accepted</span>
+
+  ) : service.assignment_status === "Declined" ? (
+    <span className="text-danger fw-bold">Rejected</span>
+
+  ) : (["Pending", "Assigned"].includes(service.assignment_status) &&
+       service.assigned_engineer === resourceId) ? (
+    <div className="d-flex justify-content-center gap-2">
+      <Button
+        variant="success"
+        size="sm"
+        onClick={() => handleAcceptClick(service.request_id, service.assignment_id)}
+        className="px-2"
+      >
+        Accept
+      </Button>
+      <Button
+        variant="danger"
+        size="sm"
+        onClick={() => handleRejectClick(service)}
+        className="px-2"
+      >
+        Reject
+      </Button>
+    </div>
+
+  ) : (
+    <span className="text-secondary fw-bold">Pending</span>
+  )}
+</td>
                       <td className="py-3 px-3">
           {/* PDF Report Button */}
        {/* <PdfReportButton
@@ -1563,6 +1573,21 @@ const getProblemTypeSearchData = (problemTypeId) => {
   customerInfo={getCustomerDetails(service.customer)}
 />
         </td>
+        <td className="py-3 px-3">
+  <label className="btn btn-outline-primary btn-sm mb-0">
+    Upload Report
+    <input
+      type="file"
+      accept="application/pdf"
+      hidden
+      onChange={(e) => {
+        const file = e.target.files[0];
+        handlePdfUpload(file, service);
+        e.target.value = "";
+      }}
+    />
+  </label>
+</td>
                   </tr>
                 ))
               )}

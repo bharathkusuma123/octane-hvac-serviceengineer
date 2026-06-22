@@ -91,13 +91,21 @@ const serviceItemName =
 
   // New state for completion form fields
   const [completionData, setCompletionData] = useState({
-    act_start_datetime: '',
-    act_end_datetime: '',
-    act_material_cost: '',
-    act_labour_hours: '',
-    act_labour_cost: '',
-    completion_notes: ''
-  });
+  act_start_datetime: service?.act_start_datetime 
+    ? service.act_start_datetime.toString().replace(/([+-]\d{2}:\d{2}|Z)$/, '') 
+    : '',
+  act_end_datetime: service?.act_end_datetime 
+    ? service.act_end_datetime.toString().replace(/([+-]\d{2}:\d{2}|Z)$/, '') 
+    : '',
+  act_material_cost: service?.act_material_cost || '',
+  act_labour_hours: service?.act_labour_hours || '',
+  act_labour_cost: service?.act_labour_cost || '',
+  completion_notes: service?.completion_notes || ''
+});
+
+// Boolean to check if already closed (view-only mode)
+const isAlreadyClosed = service?.status === 'Closed';
+
 
   // Fetch components and PM schedules
   useEffect(() => {
@@ -405,23 +413,36 @@ const getProblemTypeName = (id) => {
     }
   };
 
-  const formatDateTime = (date, time) => {
-    if (!date && !time) return 'N/A';
-    
-    try {
-      const dt = new Date(time ? `${date}T${time}` : date);
-      return dt.toLocaleString('en-IN', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch (error) {
-      return 'Invalid Date';
+ const formatDateTime = (date, time) => {
+  if (!date && !time) return 'N/A';
+
+  try {
+    let dt;
+
+    if (time) {
+      // For preferred_date + preferred_time (e.g. "2026-05-01" + "11:00:00")
+      dt = new Date(`${date}T${time}`);
+    } else {
+      // ✅ For ISO strings like "2026-05-01T11:00:00+03:00"
+      // Strip timezone and treat as local — avoids browser converting to local tz
+      const stripped = date.toString().replace(/([+-]\d{2}:\d{2}|Z)$/, '');
+      dt = new Date(stripped);
     }
-  };
+
+    if (isNaN(dt.getTime())) return 'N/A';
+
+    return dt.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',       // "May"
+      day: '2-digit',       // "01"
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch (error) {
+    return 'Invalid Date';
+  }
+};
 
   return (
     <>
@@ -529,109 +550,124 @@ const getProblemTypeName = (id) => {
                 </Form.Group>
 
                 {/* Completion Form - Only shown when status is Closed */}
-                {status === 'Closed' && (
-                  <div 
-                   ref={completionRef}
-                   className="service-details__completion-form mt-4">
-                    <h5 className="service-details__completion-title">Service Completion Details</h5>
-                    <Row className="service-details__completion-grid">
-                      <Col xs={12} md={6} className="service-details__completion-col">
-                        <Form.Group className="service-details__form-group">
-                          <Form.Label>Actual Start Date Time *</Form.Label>
-                          <Form.Control
-                            type="datetime-local"
-                            value={completionData.act_start_datetime}
-                            onChange={(e) => handleCompletionDataChange('act_start_datetime', e.target.value)}
-                            className="service-details__form-control"
-                          />
-                        </Form.Group>
+               {status === 'Closed' && (
+  <div ref={completionRef} className="service-details__completion-form mt-4">
+    <h5 className="service-details__completion-title">
+      Service Completion Details
+      {isAlreadyClosed && (
+        <span className="badge bg-secondary ms-2" style={{ fontSize: '0.75rem' }}>
+          View Only
+        </span>
+      )}
+    </h5>
 
-                        <Form.Group className="service-details__form-group">
-                          <Form.Label>Actual End Date Time *</Form.Label>
-                          <Form.Control
-                            type="datetime-local"
-                            value={completionData.act_end_datetime}
-                            onChange={(e) => handleCompletionDataChange('act_end_datetime', e.target.value)}
-                            className="service-details__form-control"
-                          />
-                        </Form.Group>
+    <Row className="service-details__completion-grid">
+      <Col xs={12} md={6} className="service-details__completion-col">
+        <Form.Group className="service-details__form-group">
+          <Form.Label>Actual Start Date Time *</Form.Label>
+          <Form.Control
+            type="datetime-local"
+            value={completionData.act_start_datetime}
+            onChange={(e) => handleCompletionDataChange('act_start_datetime', e.target.value)}
+            className="service-details__form-control"
+            disabled={isAlreadyClosed}  // ✅ disabled if already closed
+          />
+        </Form.Group>
 
-                        <Form.Group className="service-details__form-group">
-                          <Form.Label>Material Cost (₹)</Form.Label>
-                          <Form.Control
-                            type="number"
-                            step="0.01"
-                            value={completionData.act_material_cost}
-                            onChange={(e) => handleCompletionDataChange('act_material_cost', e.target.value)}
-                            placeholder="Enter material cost"
-                            className="service-details__form-control"
-                          />
-                        </Form.Group>
-                      </Col>
+        <Form.Group className="service-details__form-group">
+          <Form.Label>Actual End Date Time *</Form.Label>
+          <Form.Control
+            type="datetime-local"
+            value={completionData.act_end_datetime}
+            onChange={(e) => handleCompletionDataChange('act_end_datetime', e.target.value)}
+            className="service-details__form-control"
+            disabled={isAlreadyClosed}  // ✅
+          />
+        </Form.Group>
 
-                      <Col xs={12} md={6} className="service-details__completion-col">
-                        <Form.Group className="service-details__form-group">
-                          <Form.Label>Labour Hours</Form.Label>
-                          <Form.Control
-                            type="number"
-                            step="0.01"
-                            value={completionData.act_labour_hours}
-                            onChange={(e) => handleCompletionDataChange('act_labour_hours', e.target.value)}
-                            placeholder="Auto-calculated"
-                            readOnly={!!completionData.act_start_datetime && !!completionData.act_end_datetime}
-                            className="service-details__form-control"
-                          />
-                          <Form.Text className="text-muted">
-                            {completionData.act_start_datetime && completionData.act_end_datetime 
-                              ? 'Auto-calculated from dates' 
-                              : 'Manual entry allowed if dates not set'}
-                          </Form.Text>
-                        </Form.Group>
+        <Form.Group className="service-details__form-group">
+          <Form.Label>Material Cost (﷼)</Form.Label>
+          <Form.Control
+            type="number"
+            step="0.01"
+            value={completionData.act_material_cost}
+            onChange={(e) => handleCompletionDataChange('act_material_cost', e.target.value)}
+            placeholder="Enter material cost"
+            className="service-details__form-control"
+            disabled={isAlreadyClosed}  // ✅
+          />
+        </Form.Group>
+      </Col>
 
-                        <Form.Group className="service-details__form-group">
-                          <Form.Label>Labour Cost (₹)</Form.Label>
-                          <Form.Control
-                            type="number"
-                            step="0.01"
-                            value={completionData.act_labour_cost}
-                            onChange={(e) => handleCompletionDataChange('act_labour_cost', e.target.value)}
-                            placeholder="Auto-calculated"
-                            readOnly
-                            className="service-details__form-control"
-                          />
-                          <Form.Text className="text-muted">
-                            Hourly Rate: ₹{resourceData?.hourly_rate || '0.00'} × {completionData.act_labour_hours || '0'} hours
-                          </Form.Text>
-                        </Form.Group>
-                      </Col>
+      <Col xs={12} md={6} className="service-details__completion-col">
+        <Form.Group className="service-details__form-group">
+          <Form.Label>Labour Hours</Form.Label>
+          <Form.Control
+            type="number"
+            step="0.01"
+            value={completionData.act_labour_hours}
+            onChange={(e) => handleCompletionDataChange('act_labour_hours', e.target.value)}
+            placeholder="Auto-calculated"
+            readOnly={!!completionData.act_start_datetime && !!completionData.act_end_datetime}
+            className="service-details__form-control"
+            disabled={isAlreadyClosed}  // ✅
+          />
+          <Form.Text className="text-muted">
+            {completionData.act_start_datetime && completionData.act_end_datetime
+              ? 'Auto-calculated from dates'
+              : 'Manual entry allowed if dates not set'}
+          </Form.Text>
+        </Form.Group>
 
-                      <Col xs={12} className="service-details__completion-full-col">
-                        <Form.Group className="service-details__form-group">
-                          <Form.Label>Completion Notes</Form.Label>
-                          <Form.Control
-                            as="textarea"
-                            rows={3}
-                            value={completionData.completion_notes}
-                            onChange={(e) => handleCompletionDataChange('completion_notes', e.target.value)}
-                            placeholder="Enter completion notes and remarks"
-                            className="service-details__form-control service-details__textarea"
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
+        <Form.Group className="service-details__form-group">
+          <Form.Label>Labour Cost (﷼)</Form.Label>
+          <Form.Control
+            type="number"
+            step="0.01"
+            value={completionData.act_labour_cost}
+            onChange={(e) => handleCompletionDataChange('act_labour_cost', e.target.value)}
+            placeholder="Auto-calculated"
+            readOnly
+            className="service-details__form-control"
+            disabled={isAlreadyClosed}  // ✅
+          />
+          <Form.Text className="text-muted">
+            Hourly Rate: ﷼{resourceData?.hourly_rate || '0.00'} × {completionData.act_labour_hours || '0'} hours
+          </Form.Text>
+        </Form.Group>
+      </Col>
 
-                    <div className="service-details__completion-actions mt-3">
-                      <Button 
-                        variant="primary" 
-                        onClick={handleCompletionSubmit}
-                        disabled={updating}
-                        className="service-details__update-btn"
-                      >
-                        {updating ? 'Updating...' : 'Update Status with Completion Details'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
+      <Col xs={12} className="service-details__completion-full-col">
+        <Form.Group className="service-details__form-group">
+          <Form.Label>Completion Notes</Form.Label>
+          <Form.Control
+            as="textarea"
+            rows={3}
+            value={completionData.completion_notes}
+            onChange={(e) => handleCompletionDataChange('completion_notes', e.target.value)}
+            placeholder="Enter completion notes and remarks"
+            className="service-details__form-control service-details__textarea"
+            disabled={isAlreadyClosed}  // ✅
+          />
+        </Form.Group>
+      </Col>
+    </Row>
+
+    {/* ✅ Hide submit button if already closed */}
+    {!isAlreadyClosed && (
+      <div className="service-details__completion-actions mt-3">
+        <Button
+          variant="primary"
+          onClick={handleCompletionSubmit}
+          disabled={updating}
+          className="service-details__update-btn"
+        >
+          {updating ? 'Updating...' : 'Update Status with Completion Details'}
+        </Button>
+      </div>
+    )}
+  </div>
+)}
               </div>
             </div>
           </Tab>

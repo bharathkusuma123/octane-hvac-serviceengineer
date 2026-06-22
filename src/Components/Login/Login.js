@@ -21,66 +21,69 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true); // Start loading
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      let fcmToken = '';
+  try {
+    let fcmToken = '';
 
-      // ✅ Use Expo-provided token if available
-      if (window.ReactNativeWebView && window.fcmToken) {
-        fcmToken = window.fcmToken;
-        console.log("Using Expo token:", fcmToken);
+    if (window.ReactNativeWebView && window.fcmToken) {
+      fcmToken = window.fcmToken;
+      console.log("Using Expo token:", fcmToken);
+    }
+
+    const response = await axios.post(`${baseURL}/user-login/`, {
+      username,
+      password,
+      fcm_token: fcmToken,
+    });
+
+    const user = response.data.data;
+    const sessionId = response.data.data.session_id; // ✅ NEW
+
+    if (user.role === "Service Engineer") {
+      // ✅ Store all necessary data
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userRole", "service engineer");
+      localStorage.setItem("userId", user.user_id);
+      localStorage.setItem("userMobile", user.mobile_no);
+
+      // ✅ Store session_id
+      localStorage.setItem("session_id", sessionId);
+
+      if (user.company_id) {
+        localStorage.setItem("selectedCompany", user.company_id);
       }
 
-      const response = await axios.post(`${baseURL}/user-login/`, {
-        username,
-        password,
-        fcm_token: fcmToken, // ✅ Send token to backend
+      console.log("Session ID stored:", sessionId);
+
+      // ✅ Send login message to Expo
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({ type: 'login', userId: user.user_id })
+        );
+      }
+
+      navigate("/dashboard", { 
+        state: { 
+          userMobile: user.mobile_no,
+          userId: user.user_id,
+          userData: user
+        } 
       });
 
-      const user = response.data.data;
-
-      if (user.role === "Service Engineer") {
-        // ✅ Store all necessary data in localStorage
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userRole", "service engineer");
-        localStorage.setItem("userId", user.user_id);
-        localStorage.setItem("userMobile", user.mobile_no);
-
-        if (user.company_id) {
-          localStorage.setItem("selectedCompany", user.company_id);
-        }
-
-        console.log("User data from API:", user);
-        console.log("Stored userId:", localStorage.getItem("userId"));
-
-        // ✅ Send login message to Expo for React Native WebView
-        if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(
-            JSON.stringify({ type: 'login', userId: user.user_id })
-          );
-        }
-
-        // Navigate to dashboard
-        navigate("/dashboard", { 
-          state: { 
-            userMobile: user.mobile_no,
-            userId: user.user_id,
-            userData: user
-          } 
-        });
-      } else {
-        setError("User is not a Service Engineer");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError(err.response?.data?.message || "Invalid mobile number or password");
-    } finally {
-      setLoading(false); // Stop loading
+    } else {
+      setError("User is not a Service Engineer");
     }
-  };
+
+  } catch (err) {
+    console.error("Login error:", err);
+    setError(err.response?.data?.message || "Invalid mobile number or password");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="container">
